@@ -1,0 +1,108 @@
+/*
+ * Duezy theme tokens.
+ *
+ * Three layers:
+ *  1. @theme inline  → exposes CSS vars to Tailwind as utilities
+ *     (bg-accent-600, text-fg-1, border-line, …).
+ *  2. [data-accent]  → six accent ramps (same ramp in light and dark).
+ *  3. [data-mode]    → neutral surface/text tokens flip for dark.
+ * Both attributes are set on <html> by the preboot script and useTheme.
+ */
+
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
+@theme inline {
+  --color-accent-50: var(--a-50);
+  --color-accent-100: var(--a-100);
+  --color-accent-200: var(--a-200);
+  --color-accent-300: var(--a-300);
+  --color-accent-400: var(--a-400);
+  --color-accent-500: var(--a-500);
+  --color-accent-600: var(--a-600);
+  --color-accent-700: var(--a-700);
+  --color-accent-800: var(--a-800);
+  --color-accent-900: var(--a-900);
+  --color-accent-950: var(--a-950);
+
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-surface-2: var(--c-surface-2);
+  --color-fg-1: var(--c-fg1);
+  --color-fg-2: var(--c-fg2);
+  --color-line: var(--c-line);
+  --color-danger: var(--c-danger);
+  --color-success: var(--c-success);
+  --color-warning: var(--c-warning);
+
+  --font-sans: var(--app-font);
+}
+
+/* ---- Accent ramps ------------------------------------------------------ */
+
+:root,
+[data-accent="teal"] {
+  --a-50: #f0fdfa; --a-100: #ccfbf1; --a-200: #99f6e4; --a-300: #5eead4;
+  --a-400: #2dd4bf; --a-500: #14b8a6; --a-600: #0d9488; --a-700: #0f766e;
+  --a-800: #115e59; --a-900: #134e4a; --a-950: #042f2e;
+}
+[data-accent="emerald"] {
+  --a-50: #ecfdf5; --a-100: #d1fae5; --a-200: #a7f3d0; --a-300: #6ee7b7;
+  --a-400: #34d399; --a-500: #10b981; --a-600: #059669; --a-700: #047857;
+  --a-800: #065f46; --a-900: #064e3b; --a-950: #022c22;
+}
+[data-accent="blue"] {
+  --a-50: #eff6ff; --a-100: #dbeafe; --a-200: #bfdbfe; --a-300: #93c5fd;
+  --a-400: #60a5fa; --a-500: #3b82f6; --a-600: #2563eb; --a-700: #1d4ed8;
+  --a-800: #1e40af; --a-900: #1e3a8a; --a-950: #172554;
+}
+[data-accent="violet"] {
+  --a-50: #f5f3ff; --a-100: #ede9fe; --a-200: #ddd6fe; --a-300: #c4b5fd;
+  --a-400: #a78bfa; --a-500: #8b5cf6; --a-600: #7c3aed; --a-700: #6d28d9;
+  --a-800: #5b21b6; --a-900: #4c1d95; --a-950: #2e1065;
+}
+[data-accent="rose"] {
+  --a-50: #fff1f2; --a-100: #ffe4e6; --a-200: #fecdd3; --a-300: #fda4af;
+  --a-400: #fb7185; --a-500: #f43f5e; --a-600: #e11d48; --a-700: #be123c;
+  --a-800: #9f1239; --a-900: #881337; --a-950: #4c0519;
+}
+[data-accent="amber"] {
+  --a-50: #fffbeb; --a-100: #fef3c7; --a-200: #fde68a; --a-300: #fcd34d;
+  --a-400: #fbbf24; --a-500: #f59e0b; --a-600: #d97706; --a-700: #b45309;
+  --a-800: #92400e; --a-900: #78350f; --a-950: #451a03;
+}
+
+/* ---- Neutral tokens: light (default) / dark ---------------------------- */
+
+:root {
+  --c-bg: #f6f7f9;
+  --c-surface: #ffffff;
+  --c-surface-2: #eef1f4;
+  --c-fg1: #101828;
+  --c-fg2: #667085;
+  --c-line: #e4e7ec;
+  --c-danger: #dc2626;
+  --c-success: #16a34a;
+  --c-warning: #d97706;
+}
+
+[data-mode="dark"] {
+  --c-bg: #0b0f14;
+  --c-surface: #141a22;
+  --c-surface-2: #1d2530;
+  --c-fg1: #e6edf3;
+  --c-fg2: #8b98a5;
+  --c-line: #253040;
+  --c-danger: #ef4444;
+  --c-success: #22c55e;
+  --c-warning: #f59e0b;
+}
+
+/* ---- Fonts per language ------------------------------------------------ */
+
+:root,
+[lang="en"] {
+  --app-font: "Inter Variable", system-ui, -apple-system, sans-serif;
+}
+[lang="fa"] {
+  --app-font: "Vazirmatn Variable", "Inter Variable", system-ui, sans-serif;
+}

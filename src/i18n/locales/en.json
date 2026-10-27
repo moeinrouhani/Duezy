@@ -1,0 +1,246 @@
+{
+  "app": {
+    "name": "Duezy",
+    "tagline": "Never miss a due date"
+  },
+  "nav": {
+    "home": "Home",
+    "calendar": "Calendar",
+    "stats": "Stats",
+    "settings": "Settings",
+    "search": "Search",
+    "categories": "Categories",
+    "add": "New reminder"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "undo": "Undo",
+    "skip": "Skip",
+    "done": "Done",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday",
+    "inDays_one": "in {{count}} day",
+    "inDays_other": "in {{count}} days",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "daysOverdue_one": "{{count}} day overdue",
+    "daysOverdue_other": "{{count}} days overdue",
+    "loading": "Loading…",
+    "back": "Back",
+    "updateAvailable": "A new version is available",
+    "reload": "Reload"
+  },
+  "home": {
+    "overdue": "Overdue",
+    "todaySection": "Today",
+    "upcoming": "Upcoming",
+    "doneSection": "Done",
+    "showDone": "Show done",
+    "hideDone": "Hide done",
+    "emptyTitle": "No reminders yet",
+    "emptyBody": "Add your first due date — a loan installment, an insurance renewal, a bill.",
+    "addFirst": "Add a reminder"
+  },
+  "card": {
+    "recurring": "Recurring",
+    "alertsOn": "Alerts on",
+    "pinned": "Pinned"
+  },
+  "form": {
+    "newTitle": "New reminder",
+    "editTitle": "Edit reminder",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Bank installment",
+    "dueDateLabel": "Due date",
+    "categoryLabel": "Category",
+    "amountLabel": "Amount (optional)",
+    "amountPlaceholder": "e.g. 2500000",
+    "currencyLabel": "Currency label (optional)",
+    "currencyPlaceholder": "e.g. $ or T",
+    "notesLabel": "Notes",
+    "notesPlaceholder": "Anything you want to remember…",
+    "alertsLabel": "Alerts",
+    "moreOptions": "More options",
+    "lessOptions": "Fewer options",
+    "titleRequired": "Title is required",
+    "pinnedLabel": "Pin to top"
+  },
+  "recurrence": {
+    "label": "Repeat",
+    "none": "One-time",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "intervalLabel": "Every",
+    "unit": {
+      "daily": "day(s)",
+      "weekly": "week(s)",
+      "monthly": "month(s)",
+      "yearly": "year(s)"
+    },
+    "repeatOn": "Repeat on",
+    "end": "Ends",
+    "endNever": "Never",
+    "endOn": "On a date",
+    "endAfter": "After occurrences",
+    "countLabel": "Occurrences",
+    "calendarBasis": "Month math follows",
+    "calendarBasisJalali": "Jalali months",
+    "calendarBasisGregorian": "Gregorian months",
+    "nextOccurrences": "Next occurrences",
+    "previewEmpty": "The series ends here"
+  },
+  "alerts": {
+    "dayOf": "Day of due date",
+    "dayBefore_one": "{{count}} day before",
+    "dayBefore_other": "{{count}} days before",
+    "inAppOnly": "No alerts — in-app badge only"
+  },
+  "detail": {
+    "title": "Reminder",
+    "dueLabel": "Due",
+    "statusLabel": "Status",
+    "active": "Active",
+    "doneState": "Done",
+    "historyLabel": "History",
+    "historyEmpty": "Nothing settled yet",
+    "completedOn": "Settled {{date}}",
+    "skippedTag": "skipped",
+    "markDone": "Mark as done",
+    "skipLabel": "Skip this occurrence",
+    "deletedToast": "Reminder deleted",
+    "completedToast": "Marked as done",
+    "skippedToast": "Occurrence skipped",
+    "undoneToast": "Restored",
+    "amountLabel": "Amount",
+    "notesLabel": "Notes",
+    "alertsLabel": "Alerts",
+    "deleteTitle": "Delete this reminder?",
+    "deleteMessage": "It disappears from all lists. You can undo right after."
+  },
+  "calendar": {
+    "title": "Calendar",
+    "remindersOnDay": "Reminders on this day",
+    "noneOnDay": "Nothing due on this day",
+    "todayButton": "Today"
+  },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search reminders…",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "empty": "Nothing found",
+    "emptyHint": "Try a title, note, category or amount."
+  },
+  "stats": {
+    "title": "Stats",
+    "activeLabel": "Active",
+    "overdueLabel": "Overdue",
+    "completedLabel": "Completed",
+    "onTimeLabel": "On time",
+    "lateLabel": "Late",
+    "skippedLabel": "Skipped",
+    "streakLabel": "Day streak",
+    "last30Label": "Last 30 days",
+    "byCategoryLabel": "By category",
+    "noData": "No data yet — complete a reminder to see stats."
+  },
+  "settings": {
+    "title": "Settings",
+    "languageLabel": "Language",
+    "calendarLabel": "Calendar",
+    "jalali": "Jalali",
+    "gregorian": "Gregorian",
+    "appearanceLabel": "Appearance",
+    "themeLabel": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "accentLabel": "Accent color",
+    "weekStartLabel": "Week starts on",
+    "weekSat": "Saturday",
+    "weekSun": "Sunday",
+    "weekMon": "Monday",
+    "notificationsTitle": "Notifications",
+    "enableLabel": "Browser notifications",
+    "enableHint": "Sent when the app is open (or recently active). On iPhone, add Duezy to the Home Screen first.",
+    "permissionDenied": "Notifications are blocked — allow them in your browser settings.",
+    "notifyTimeLabel": "Alert time",
+    "defaultAlertsLabel": "Default alerts for new reminders",
+    "backupTitle": "Backup",
+    "exportLabel": "Export backup",
+    "importLabel": "Import backup",
+    "importHint": "A backup file contains all reminders, categories and settings. Importing merges by newest change.",
+    "importConfirmTitle": "Import this backup?",
+    "importConfirmMessage": "Records from the file will be merged with your current data.",
+    "aboutTitle": "About Duezy",
+    "aboutBody": "A small, offline-first app for the dates that matter — installments, insurance, bills and appointments. Your data stays on your device.",
+    "versionLabel": "Version"
+  },
+  "backup": {
+    "exportedToast": "Backup downloaded",
+    "importedToast_one": "{{count}} reminder imported",
+    "importedToast_other": "{{count}} reminders imported",
+    "importFailed": "Import failed",
+    "invalidJson": "That file isn't valid JSON",
+    "invalidFormat": "That isn't a Duezy backup file",
+    "settingsAppliedToast": "Settings restored from backup"
+  },
+  "categories": {
+    "title": "Categories",
+    "addTitle": "New category",
+    "editTitle": "Edit category",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Home bills",
+    "iconLabel": "Icon",
+    "colorLabel": "Color",
+    "deleteConfirmTitle": "Delete category?",
+    "deleteConfirmMessage": "Its reminders move to “Other”.",
+    "builtInHint": "Built-in categories can't be deleted",
+    "nameRequired": "Name is required",
+    "empty": "No custom categories yet"
+  },
+  "cat": {
+    "bills": "Bills & installments",
+    "vehicle": "Vehicle",
+    "personal": "Personal",
+    "other": "Other"
+  },
+  "accent": {
+    "teal": "Teal",
+    "emerald": "Emerald",
+    "blue": "Blue",
+    "violet": "Violet",
+    "rose": "Rose",
+    "amber": "Amber"
+  },
+  "notif": {
+    "dueToday": "Due today",
+    "dueIn_one": "Due in {{count}} day",
+    "dueIn_other": "Due in {{count}} days",
+    "dueOverdue": "Past due"
+  },
+  "months": {
+    "jalali": [
+      "Farvardin", "Ordibehesht", "Khordad", "Tir", "Mordad", "Shahrivar",
+      "Mehr", "Aban", "Azar", "Dey", "Bahman", "Esfand"
+    ],
+    "gregorian": [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ]
+  },
+  "weekdays": {
+    "full": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "short": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+  }
+}

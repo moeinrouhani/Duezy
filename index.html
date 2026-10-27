@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Duezy — never miss a due date. Reminders for bills, installments, insurance and appointments." />
+    <meta name="theme-color" content="#0d9488" />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Duezy</title>
+    <script>
+      // Apply persisted language/theme before first paint to avoid flash.
+      (function () {
+        try {
+          var raw = localStorage.getItem('duezy-settings');
+          var s = (raw && JSON.parse(raw).state) || {};
+          var settings = s.settings || {};
+          var lang = settings.lang === 'en' ? 'en' : 'fa';
+          var mode = settings.themeMode;
+          if (mode !== 'light' && mode !== 'dark') {
+            mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          var root = document.documentElement;
+          root.lang = lang;
+          root.dir = lang === 'fa' ? 'rtl' : 'ltr';
+          root.dataset.accent = settings.accent || 'teal';
+          root.dataset.mode = mode;
+        } catch (e) {
+          /* fall back to defaults already on <html> */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
