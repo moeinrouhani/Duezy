@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { VercelRequest } from '@vercel/node';
-import { getSql, ensureSchema } from './db.js';
+import { getSql, ensureSchema, queryRows } from './db.js';
 import type { UserPublic } from './types.js';
 
 /**
@@ -61,11 +61,6 @@ export async function createSession(userId: string): Promise<string> {
     INSERT INTO sessions (id, user_id, expires_at)
     VALUES (${sha256(token)}, ${userId}, now() + make_interval(secs => ${SESSION_TTL_MS / 1000}))`;
   return token;
-}
-
-/** The neon driver returns an untyped union; every call site narrows it here. */
-export async function queryRows<T>(promise: Promise<unknown>): Promise<T[]> {
-  return (await promise) as T[];
 }
 
 export async function getUserFromRequest(req: VercelRequest): Promise<UserPublic | null> {

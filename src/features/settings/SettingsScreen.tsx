@@ -72,7 +72,8 @@ export function SettingsScreen() {
   };
 
   const onSyncNow = async () => {
-    const outcome = await syncNow();
+    // Full two-way pass: heals any cursor/clock weirdness, not just incremental deltas.
+    const outcome = await syncNow({ full: true });
     if (outcome === 'synced') showSnackbar(t('auth.syncedToast'));
     else if (outcome === 'failed') showSnackbar(t('auth.syncError'));
   };

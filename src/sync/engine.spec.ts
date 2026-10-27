@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterNewer, shouldApplyRemote } from './engine';
+import { filterChangedSince, shouldApplyRemote } from './engine';
 import { parseEnvelope, parseSince } from '../../api/_lib/sync';
 
 interface Row {
@@ -8,16 +8,17 @@ interface Row {
 }
 
 describe('sync/engine merge rules', () => {
-  const since = '2026-10-27T09:00:00.000Z';
+  const sinceMs = Date.parse('2026-10-27T09:00:00.000Z');
 
-  it('filterNewer: full set on initial sync, strict > afterwards', () => {
+  it('filterChangedSince: full set when no marker, strictly-newer afterwards', () => {
     const rows: Row[] = [
       { id: 'a', updatedAt: '2026-10-27T08:00:00.000Z' },
-      { id: 'b', updatedAt: '2026-10-27T09:00:00.000Z' }, // == cursor → excluded
+      { id: 'b', updatedAt: '2026-10-27T09:00:00.000Z' }, // == marker → excluded
       { id: 'c', updatedAt: '2026-10-27T10:00:00.000Z' },
+      { id: 'd', updatedAt: 'not-a-date' }, // unparsable → excluded
     ];
-    expect(filterNewer(rows, null)).toHaveLength(3);
-    expect(filterNewer(rows, since).map((r) => r.id)).toEqual(['c']);
+    expect(filterChangedSince(rows, null)).toHaveLength(4);
+    expect(filterChangedSince(rows, sinceMs).map((r) => r.id)).toEqual(['c']);
   });
 
   it('shouldApplyRemote: remote must be strictly newer than local', () => {

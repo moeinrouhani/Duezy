@@ -39,6 +39,11 @@ export function getSql(): SqlClient {
   return sqlClient;
 }
 
+/** The neon driver returns an untyped union; every call site narrows it here. */
+export async function queryRows<T>(promise: Promise<unknown>): Promise<T[]> {
+  return (await promise) as T[];
+}
+
 /**
  * Idempotent schema bootstrap — runs once per lambda instance, before the
  * first query that needs a table. CREATE TABLE IF NOT EXISTS keeps deployment

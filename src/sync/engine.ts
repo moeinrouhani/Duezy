@@ -10,11 +10,20 @@ import { setSyncTrigger } from './bus';
 /**
  * Bidirectional last-write-wins sync.
  *
- * One round trip per sync: push every local record newer than the cursor,
- * pull every remote record newer than the cursor, apply pulled records only
- * when strictly newer than the local copy. The cursor is the SERVER timestamp
- * of the previous response, so client clock skew can't corrupt the merge.
- * Offline changes simply wait — the next successful sync pushes them.
+ * One round trip per sync: push every locally-changed record, pull every
+ * remote change, apply pulled records only when strictly newer than the
+ * local copy.
+ *
+ * Two independent cursors, deliberately on different clocks:
+ * - PUSH cursor = client wall clock when the last sync started. Comparing
+ *   client timestamps against the server's clock would silently drop edits
+ *   on any device whose clock runs behind the server.
+ * - PULL cursor = the server timestamp of the last response. Server-only
+ *   comparison, immune to client clock skew.
+ *
+ * Offline changes simply wait — the next successful sync pushes them, and
+ * the manual "Sync now" button forces a FULL two-way pass that converges
+ * regardless of cursors or clocks.
  */
 
 export type SyncOutcome = 'synced' | 'signed-out' | 'failed';
@@ -22,10 +31,16 @@ export type SyncOutcome = 'synced' | 'signed-out' | 'failed';
 let inFlight: Promise<SyncOutcome> | null = null;
 let rerunQueued = false;
 
-/** Records strictly newer than the cursor; all of them when the cursor is null. */
-export function filterNewer<T extends { updatedAt: string }>(records: T[], since: string | null): T[] {
-  if (since === null) return records;
-  return records.filter((record) => record.updatedAt > since);
+/** Records changed after the given client-clock moment; all of them when null. */
+export function filterChangedSince<T extends { updatedAt: string }>(
+  records: T[],
+  sinceMs: number | null,
+): T[] {
+  if (sinceMs === null) return records;
+  return records.filter((record) => {
+    const changedAtMs = Date.parse(record.updatedAt);
+    return Number.isFinite(changedAtMs) && changedAtMs > sinceMs;
+  });
 }
 
 /** LWW accept rule for pulled records — never clobber a fresher local edit. */
@@ -34,12 +49,12 @@ export function shouldApplyRemote<T extends { updatedAt: string }>(remote: T, lo
 }
 
 /** Coalesce concurrent callers into one round trip; a change arriving mid-sync re-runs. */
-export function syncNow(): Promise<SyncOutcome> {
+export function syncNow(opts?: { full?: boolean }): Promise<SyncOutcome> {
   if (inFlight) {
     rerunQueued = true;
     return inFlight;
   }
-  inFlight = runSync().finally(() => {
+  inFlight = runSync(opts?.full ?? false).finally(() => {
     inFlight = null;
     if (rerunQueued) {
       rerunQueued = false;
@@ -49,13 +64,17 @@ export function syncNow(): Promise<SyncOutcome> {
   return inFlight;
 }
 
-async function runSync(): Promise<SyncOutcome> {
+async function runSync(full: boolean): Promise<SyncOutcome> {
   const { user } = useAuthStore.getState();
   if (!user) return 'signed-out';
 
   const syncState = useSyncStore.getState();
-  const initial = syncState.lastSyncUser !== user.id;
-  const since = initial ? null : syncState.lastSyncAt;
+  const initial = full || syncState.lastSyncUser !== user.id;
+  const pullSince = initial ? null : syncState.lastSyncAt;
+  // Capture BEFORE gathering, so edits made during the flight are caught by
+  // the next sync rather than falling between two cursors.
+  const pushMarkerMs = Date.now();
+  const pushSinceMs = initial ? null : (syncState.lastPushAtMs ?? 0);
   useSyncStore.setState({ status: 'syncing' });
 
   try {
@@ -66,15 +85,13 @@ async function runSync(): Promise<SyncOutcome> {
       repos.completions.listAll(),
     ]);
 
-    const pushing = initial
-      ? { reminders, categories, completions }
-      : {
-          reminders: filterNewer(reminders, since),
-          categories: filterNewer(categories, since),
-          completions: filterNewer(completions, since),
-        };
+    const pushing = {
+      reminders: filterChangedSince(reminders, pushSinceMs),
+      categories: filterChangedSince(categories, pushSinceMs),
+      completions: filterChangedSince(completions, pushSinceMs),
+    };
 
-    const { now, changes } = await api.sync(since, pushing);
+    const { now, changes } = await api.sync(pullSince, pushing);
 
     // Apply directly against Dexie (not the repositories) so the applied
     // remote records don't re-trigger requestSync through the mutation bus.
@@ -86,10 +103,15 @@ async function runSync(): Promise<SyncOutcome> {
     useSyncStore.getState().setMeta({
       lastSyncUser: user.id,
       lastSyncAt: now,
+      lastPushAtMs: pushMarkerMs,
       lastSyncedAtMs: Date.now(),
       status: 'idle',
     });
     await Promise.all([useReminderStore.getState().refresh(), useCategoryStore.getState().refresh()]);
+    console.info(
+      `[sync] pushed ${pushing.reminders.length}+${pushing.categories.length}+${pushing.completions.length}, ` +
+        `pulled ${changes.reminders.length}+${changes.categories.length}+${changes.completions.length}`,
+    );
     return 'synced';
   } catch (error) {
     const status =
@@ -99,6 +121,7 @@ async function runSync(): Promise<SyncOutcome> {
           ? 'offline'
           : 'error';
     useSyncStore.setState({ status });
+    console.error('[sync] failed:', error);
     return 'failed';
   }
 }
@@ -121,7 +144,10 @@ async function applyTable<T extends { id: string; updatedAt: string }>(
   const localById = new Map(localRows.map((row) => [row.id, row]));
   const accepted: T[] = [];
   for (const remote of remoteRows) {
-    if (!hasSyncShape(remote)) continue;
+    if (!hasSyncShape(remote)) {
+      console.warn('[sync] skipped malformed remote record');
+      continue;
+    }
     const candidate = remote as T;
     if (shouldApplyRemote(candidate, localById.get(candidate.id))) accepted.push(candidate);
   }
