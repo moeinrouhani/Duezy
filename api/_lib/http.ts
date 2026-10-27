@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import type { ApiErrorCode } from './types';
+import type { ApiErrorCode } from './types.js';
 
 /** Small HTTP helpers shared by the /api endpoints. */
 

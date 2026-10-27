@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ensureSchema, getSql, NotConfiguredError } from './_lib/db';
-import { getUserFromRequest } from './_lib/session';
-import { isRateLimited, clientIp, readJsonBody, sendError, sendJson } from './_lib/http';
-import { parseEnvelope, parseSince, type ParsedRecord } from './_lib/sync';
-import { queryRows } from './_lib/session';
-import type { SyncChanges, SyncResponse } from './_lib/types';
+import { ensureSchema, getSql, NotConfiguredError } from './_lib/db.js';
+import { getUserFromRequest } from './_lib/session.js';
+import { isRateLimited, clientIp, readJsonBody, sendError, sendJson } from './_lib/http.js';
+import { parseEnvelope, parseSince, type ParsedRecord } from './_lib/sync.js';
+import { queryRows } from './_lib/session.js';
+import type { SyncChanges, SyncResponse } from './_lib/types.js';
 
 type TableName = 'reminders' | 'categories' | 'completions';
 

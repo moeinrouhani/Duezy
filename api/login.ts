@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { ensureSchema, getSql, NotConfiguredError } from './_lib/db';
-import { equalizeVerifyTiming, normalizeUsername, verifyPassword } from './_lib/auth';
-import { createSession, pruneExpiredSessions, sessionCookieHeader } from './_lib/session';
-import { clientIp, isRateLimited, readJsonBody, sendError, sendJson } from './_lib/http';
-import { queryRows } from './_lib/session';
-import type { UserPublic } from './_lib/types';
+import { ensureSchema, getSql, NotConfiguredError } from './_lib/db.js';
+import { equalizeVerifyTiming, normalizeUsername, verifyPassword } from './_lib/auth.js';
+import { createSession, pruneExpiredSessions, sessionCookieHeader } from './_lib/session.js';
+import { clientIp, isRateLimited, readJsonBody, sendError, sendJson } from './_lib/http.js';
+import { queryRows } from './_lib/session.js';
+import type { UserPublic } from './_lib/types.js';
 
 const MAX_BODY_BYTES = 8 * 1024;
 

@@ -5,7 +5,7 @@ import {
   normalizeDisplayName,
   normalizeUsername,
   verifyPassword,
-} from './auth';
+} from './auth.js';
 
 describe('api/_lib/auth', () => {
   it('hash → verify round-trips', async () => {

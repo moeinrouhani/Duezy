@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { NotConfiguredError } from './_lib/db';
-import { clearSessionCookieHeader, destroySession } from './_lib/session';
-import { sendError, sendJson } from './_lib/http';
+import { NotConfiguredError } from './_lib/db.js';
+import { clearSessionCookieHeader, destroySession } from './_lib/session.js';
+import { sendError, sendJson } from './_lib/http.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {

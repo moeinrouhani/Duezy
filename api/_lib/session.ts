@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { VercelRequest } from '@vercel/node';
-import { getSql, ensureSchema } from './db';
-import type { UserPublic } from './types';
+import { getSql, ensureSchema } from './db.js';
+import type { UserPublic } from './types.js';
 
 /**
  * Cookie sessions with opaque random tokens. Only sha256(token) is stored, so
