@@ -9,9 +9,12 @@ import { SettingsScreen } from './features/settings/SettingsScreen';
 import { CategoriesScreen } from './features/categories/CategoriesScreen';
 import { ReminderForm } from './features/reminder-form/ReminderForm';
 import { ReminderDetailScreen } from './features/reminder-detail/ReminderDetailScreen';
+import { AuthScreen } from './features/auth/AuthScreen';
 import { useTheme } from './hooks/useTheme';
 import { useNotificationScheduler } from './hooks/useNotificationScheduler';
+import { useAuthStore } from './stores/authStore';
 import { useReminderStore } from './stores/dataStores';
+import { installSyncTriggers, syncNow } from './sync/engine';
 
 /** Exported so main.tsx can route service-worker deep-links into the app. */
 export const router = createHashRouter([
@@ -30,6 +33,7 @@ export const router = createHashRouter([
       { path: 'reminder/:id/edit', element: <ReminderForm /> },
     ],
   },
+  { path: '/auth', element: <AuthScreen /> },
 ]);
 
 /** Re-sync the mirror store when the tab regains focus (multi-tab LWW). */
@@ -52,6 +56,19 @@ export default function App() {
   useTheme();
   useNotificationScheduler();
   useFocusRefresh();
+  useSyncBootstrap();
 
   return <RouterProvider router={router} />;
+}
+
+/** Restore the cookie session (if any), then sync; register lifecycle triggers once. */
+function useSyncBootstrap() {
+  const refreshMe = useAuthStore((s) => s.refreshMe);
+  useEffect(() => {
+    installSyncTriggers();
+    void (async () => {
+      await refreshMe();
+      if (useAuthStore.getState().user) void syncNow();
+    })();
+  }, [refreshMe]);
 }

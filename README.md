@@ -36,14 +36,25 @@ loan installments, insurance renewals, car service, bills, rent, and appointment
   numerals (۱۲۳), fonts, and layout direction
 - **Offline-first** — all data lives in your browser (IndexedDB); the app installs as a PWA and
   works fully offline
+- **Optional account & sync** — sign in with a username and password to keep the same data on
+  every device; everything works without an account too
 - **Backups** — one-click export / import as JSON, merged safely by newest change
-- **Free & unlimited** — no accounts, no paywalls, no limits
+- **Free & unlimited** — no paywalls, no limits
 
 ## 🔒 Privacy
 
-Duezy is local-first by design. Reminders, categories, and settings never leave your device —
-there is no server and no telemetry. Browser notifications fire only while the app is open
-(no push server); the in-app Overdue / Today views are always the source of truth.
+Duezy is local-first: reminders live in your browser's IndexedDB, and the app is fully usable
+with no account at all.
+
+If you **opt in** and create an account, your reminders, categories, and completion history sync
+through the app's own Postgres database so you can pick up where you left off on another device:
+
+- Passwords are **scrypt-hashed** (never stored or logged in plain text); sessions are
+  **HttpOnly cookies** with server-side revocation
+- No email, phone number, or third-party analytics — just a username
+- Signing out never deletes local data
+- Browser notifications fire only while the app is open (no push server); the in-app
+  Overdue / Today views are always the source of truth
 
 ## 🚀 Getting started
 
@@ -55,6 +66,9 @@ cd Duezy
 npm install
 npm run dev        # → http://localhost:5173
 ```
+
+The app runs fully local without any configuration — accounts/sync are optional and only need
+the environment variable below.
 
 ### Scripts
 
@@ -71,14 +85,42 @@ npm run dev        # → http://localhost:5173
 Build and serve over HTTPS (or localhost), then use your browser's **Install** option —
 Duezy runs standalone, with its own icon and offline cache. On iOS, use *Add to Home Screen*.
 
+## 🔐 Account & sync (optional)
+
+When signed in, every change syncs to the app's Postgres database:
+
+- **Last-write-wins merge** on per-record `updatedAt` — offline edits (even days of them)
+  push automatically on the next sync; nothing is lost
+- **Incremental**: each round trip pushes/pulls only records newer than a server-clock cursor,
+  so client clock skew can't corrupt the merge
+- **Triggers**: after every local change (debounced), on app focus, every 5 minutes, and
+  manually via *Settings → Account & sync*
+- Serverless API on Vercel (`/api`): register · login · logout · me · sync, with in-memory
+  rate limiting on auth endpoints
+
+### Setting it up
+
+1. Create a **Vercel Postgres** database (or any Neon Postgres) for your deployment —
+   schema is created automatically on first request
+2. Set the `DATABASE_URL` environment variable (see [.env.example](.env.example)) to the
+   **pooled** connection string
+3. Redeploy — done. Nothing to run, nothing to migrate.
+
+Table layout: `users`, `sessions`, and one sync table per record type (`reminders`,
+`categories`, `completions`) — each keyed `(user_id, id)` with `created_at / updated_at /
+deleted_at` sync columns plus the full record as JSONB, so the server stays schema-agnostic
+while sync queries stay indexed.
+
 ## 🧱 Tech stack
 
 | Layer | Choice |
 |---|---|
 | Framework | React 19 + TypeScript + Vite 7 |
 | Styling | Tailwind CSS 4 (CSS-first config, logical properties for RTL) |
-| State | Zustand 5 (persisted settings) |
+| State | Zustand 5 (persisted settings, sync cursor) |
 | Storage | Dexie 4 (IndexedDB) behind repository interfaces |
+| Sync API | Vercel serverless functions + `@neondatabase/serverless` (HTTP driver) |
+| Database | Postgres (Vercel Postgres / Neon) |
 | Dates | date-fns 4 (Gregorian engine) + jalaali-js (Jalali conversion) |
 | i18n | i18next / react-i18next |
 | Routing | React Router 7 (hash router — deployable to any static host) |
@@ -87,16 +129,18 @@ Duezy runs standalone, with its own icon and offline cache. On iOS, use *Add to 
 ## 🗂 Project structure
 
 ```
+api/              # Serverless functions: register, login, logout, me, sync (+ _lib)
 src/
 ├─ domain/        # Pure, tested core: types, dates, Jalali math, recurrence, alerts, stats
 ├─ db/            # Dexie schema + first-run seed
 ├─ repositories/  # Persistence interfaces + Dexie adapters (sync-ready boundary)
-├─ stores/        # Zustand mirrors of the repositories + settings + UI state
+├─ sync/          # API client, sync engine (LWW merge), mutation bus
+├─ stores/        # Zustand mirrors of the repositories + settings/auth/sync + UI state
 ├─ i18n/          # i18next setup + en/fa locale files
 ├─ themes/        # CSS custom-property token system (6 accents × light/dark)
 ├─ hooks/         # useReminders, useTheme, useLocalDate, notification scheduler, …
 ├─ components/    # UI primitives, layout shell, dual-calendar date picker
-├─ features/      # Screens: home, form, detail, calendar, search, stats, categories, settings
+├─ features/      # Screens: home, form, detail, calendar, search, stats, categories, auth, settings
 └─ utils/         # Digit localization, backup, sorting, ids
 ```
 
@@ -118,11 +162,12 @@ The domain logic is covered by unit tests, including the tricky parts:
 - Jalali↔Gregorian round-trips, leap years, and month-length rules
 - Recurrence clamping in both calendars (e.g. ۳۱ شهریور → ۳۰ مهر), weekday sets, end conditions
 - Alert-slot scheduling and sectioning (overdue / today / upcoming)
+- Sync merge rules (last-write-wins filters), sync-envelope validation, scrypt password
+  hashing round-trips
 - Persian↔Latin digit conversion and en/fa locale key parity
 
 ## 🗺 Roadmap
 
-- [ ] Optional cloud sync across devices
 - [ ] Web push notifications (server-assisted)
 - [ ] Home-screen widgets
 - [ ] CSV export
@@ -140,8 +185,8 @@ Built with [React](https://react.dev), [Tailwind CSS](https://tailwindcss.com),
 
 **فارسی**
 
-دوزی یک یادآورِ موعد برای اقساط، بیمه، قبض‌ها و قرارهای مهم است — کاملاً آفلاین،
+دوئیزی یک یادآورِ موعد برای اقساط، بیمه، قبض‌ها و قرارهای مهم است — کاملاً آفلاین،
 دوزبانه (فارسی/انگلیسی) با تقویم شمسی و میلادی، تم‌های رنگی روشن و تیره.
-همه داده‌ها فقط روی دستگاه خودتان ذخیره می‌شود.
+داده‌ها روی دستگاه خودتان می‌مانند و در صورت تمایل با ساخت حساب، بین دستگاه‌ها همگام می‌شوند.
 
 </div>

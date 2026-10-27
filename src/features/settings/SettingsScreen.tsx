@@ -1,16 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import { Info } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { Toggle } from '../../components/ui/Toggle';
+import { useConfirm } from '../../components/ui/Snackbar';
 import { AlertPicker } from '../reminder-form/AlertPicker';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useAuthStore } from '../../stores/authStore';
+import { useSyncStore } from '../../stores/syncStore';
 import { ACCENTS } from '../../themes/accents';
 import { requestNotificationPermission } from '../../hooks/useNotificationScheduler';
 import { createBackup, downloadBackup, importBackup } from '../../utils/backup';
 import { useUiStore } from '../../stores/uiStore';
+import { syncNow } from '../../sync/engine';
 import { cn } from '../../utils/cn';
 import type { AccentColor, AlertOffset, CalendarSystem, Lang, ThemeMode, Weekday } from '../../domain/types';
 
@@ -36,15 +41,48 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 }
 
 export function SettingsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { settings, update } = useSettingsStore();
   const showSnackbar = useUiStore((s) => s.showSnackbar);
+  const confirm = useConfirm();
+  const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
+
+  const user = useAuthStore((s) => s.user);
+  const signOut = useAuthStore((s) => s.signOut);
+  const syncStatus = useSyncStore((s) => s.status);
+  const lastSyncedAtMs = useSyncStore((s) => s.lastSyncedAtMs);
 
   useEffect(() => {
     setPermission(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
   }, []);
+
+  const syncLine = () => {
+    if (syncStatus === 'syncing') return t('auth.syncing');
+    if (syncStatus === 'error') return t('auth.syncError');
+    if (syncStatus === 'offline') return t('auth.offline');
+    if (syncStatus === 'unavailable') return t('auth.syncUnavailable');
+    if (lastSyncedAtMs === null) return t('auth.neverSynced');
+    const time = new Date(lastSyncedAtMs).toLocaleTimeString(i18n.language === 'fa' ? 'fa-IR' : 'en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return t('auth.lastSyncedAt', { time });
+  };
+
+  const onSyncNow = async () => {
+    const outcome = await syncNow();
+    if (outcome === 'synced') showSnackbar(t('auth.syncedToast'));
+    else if (outcome === 'failed') showSnackbar(t('auth.syncError'));
+  };
+
+  const onSignOut = async () => {
+    const ok = await confirm('auth.signOutConfirmTitle', 'auth.signOutConfirmMessage');
+    if (!ok) return;
+    await signOut();
+    showSnackbar(t('auth.signedOutToast'));
+  };
 
   const onExport = async () => {
     const backup = await createBackup(settings);
@@ -77,6 +115,40 @@ export function SettingsScreen() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t('settings.title')} />
+
+      <Section title={t('settings.accountTitle')}>
+        {user ? (
+          <>
+            <Row label={t('auth.signedInAs')} hint={syncLine()}>
+              <span className="max-w-40 truncate text-sm font-medium" dir="ltr">
+                {user.displayName ?? user.username}
+              </span>
+            </Row>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                disabled={syncStatus === 'syncing'}
+                onClick={() => void onSyncNow()}
+              >
+                {t('auth.syncNow')}
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => void onSignOut()}>
+                {t('auth.signOut')}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <Row label={t('auth.neverSynced')} hint={t('settings.accountHint')}>
+              <span />
+            </Row>
+            <Button onClick={() => navigate('/auth')}>
+              {t('auth.loginTab')} / {t('auth.registerTab')}
+            </Button>
+          </>
+        )}
+      </Section>
 
       <Section title={t('settings.languageLabel')}>
         <SegmentedControl<Lang>
