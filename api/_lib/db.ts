@@ -129,18 +129,27 @@ export function ensureSchema(): Promise<void> {
                 client_updated_at = LEAST(COALESCE(client_updated_at, updated_at), now()),
                 updated_at = LEAST(updated_at, now())
               WHERE client_updated_at IS NULL OR updated_at > now()`;
+          // Repair: builds that pushed bare records (no envelope payload)
+          // stored rows with an empty `data` — dead weight every device
+          // skips on pull. Delete them so the next full push re-creates
+          // them with real payloads (LWW would reject the equal-stamp
+          // re-push onto the husk). Nothing is lost: those rows carried
+          // no recoverable data, and every device still holds its copy.
+          await sql`DELETE FROM reminders WHERE data IS NULL OR data = 'null'::jsonb`;
         } else if (table === 'categories') {
           await sql`ALTER TABLE categories ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ`;
           await sql`UPDATE categories SET
                 client_updated_at = LEAST(COALESCE(client_updated_at, updated_at), now()),
                 updated_at = LEAST(updated_at, now())
               WHERE client_updated_at IS NULL OR updated_at > now()`;
+          await sql`DELETE FROM categories WHERE data IS NULL OR data = 'null'::jsonb`;
         } else {
           await sql`ALTER TABLE completions ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ`;
           await sql`UPDATE completions SET
                 client_updated_at = LEAST(COALESCE(client_updated_at, updated_at), now()),
                 updated_at = LEAST(updated_at, now())
               WHERE client_updated_at IS NULL OR updated_at > now()`;
+          await sql`DELETE FROM completions WHERE data IS NULL OR data = 'null'::jsonb`;
         }
       }
     })().catch((error) => {

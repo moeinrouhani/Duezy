@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterChangedSince, shouldApplyRemote } from './engine';
+import { filterChangedSince, shouldApplyRemote, toEnvelope } from './engine';
 import { parseEnvelope, parseSince } from '../../api/_lib/sync';
 
 interface Row {
@@ -27,6 +27,23 @@ describe('sync/engine merge rules', () => {
     expect(shouldApplyRemote({ id: 'a', updatedAt: '2026-10-27T09:00:00.000Z' }, local)).toBe(false); // echo
     expect(shouldApplyRemote({ id: 'a', updatedAt: '2026-10-27T08:00:00.000Z' }, local)).toBe(false);
     expect(shouldApplyRemote({ id: 'a', updatedAt: '2026-10-27T08:00:00.000Z' }, undefined)).toBe(true);
+  });
+
+  it('toEnvelope wraps the full record as the data payload', () => {
+    const record = {
+      id: 'r1',
+      title: 'Loan installment',
+      createdAt: '2026-10-01T10:00:00.000Z',
+      updatedAt: '2026-10-27T10:00:00.000Z',
+      deletedAt: null,
+    };
+    expect(toEnvelope(record)).toEqual({
+      id: 'r1',
+      createdAt: '2026-10-01T10:00:00.000Z',
+      updatedAt: '2026-10-27T10:00:00.000Z',
+      deletedAt: null,
+      data: record,
+    });
   });
 });
 
@@ -58,6 +75,14 @@ describe('api/_lib/sync envelope validation', () => {
     expect(parseEnvelope({ ...valid, deletedAt: 17 }, 32_768)).toBeNull();
     expect(parseEnvelope(valid, 10)).toBeNull(); // payload over the cap
     expect(parseEnvelope('nope', 32_768)).toBeNull();
+  });
+
+  it('rejects bare records without an object data payload (silent-sync killer)', () => {
+    const { data, ...bare } = valid;
+    expect(parseEnvelope(bare, 32_768)).toBeNull(); // no data at all
+    expect(parseEnvelope({ ...valid, data: null }, 32_768)).toBeNull();
+    expect(parseEnvelope({ ...valid, data: 'just a string' }, 32_768)).toBeNull();
+    expect(parseEnvelope({ ...valid, data: [valid] }, 32_768)).toBeNull(); // array, not object
   });
 
   it('parses the since cursor (null = initial sync, undefined = invalid)', () => {

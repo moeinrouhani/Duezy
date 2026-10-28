@@ -18,10 +18,19 @@ export class ApiError extends Error {
   }
 }
 
+/** The wire shape /api/sync validates: sync columns on the envelope, the full record as `data`. */
+export interface SyncEnvelope<T> {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  data: T;
+}
+
 export interface SyncPayload {
-  reminders: Reminder[];
-  categories: Category[];
-  completions: CompletionRecord[];
+  reminders: SyncEnvelope<Reminder>[];
+  categories: SyncEnvelope<Category>[];
+  completions: SyncEnvelope<CompletionRecord>[];
 }
 
 export interface SyncResult {

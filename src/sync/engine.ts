@@ -4,7 +4,7 @@ import { getRepositories } from '../repositories';
 import { useAuthStore } from '../stores/authStore';
 import { useSyncStore } from '../stores/syncStore';
 import { useCategoryStore, useReminderStore } from '../stores/dataStores';
-import { api, ApiError } from './api';
+import { api, ApiError, type SyncEnvelope } from './api';
 import { setSyncTrigger } from './bus';
 
 /**
@@ -48,6 +48,24 @@ export function shouldApplyRemote<T extends { updatedAt: string }>(remote: T, lo
   return !local || remote.updatedAt > local.updatedAt;
 }
 
+/**
+ * Wrap a local record into the wire envelope: the four sync columns the
+ * server indexes and compares live on the envelope, the full record rides as
+ * `data`. Records pushed bare (no `data`) get stored as empty payloads, which
+ * every device then silently skips on pull — the silent-sync-killer bug.
+ */
+export function toEnvelope<T extends { id: string; createdAt: string; updatedAt: string; deletedAt: string | null }>(
+  record: T,
+): SyncEnvelope<T> {
+  return {
+    id: record.id,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    deletedAt: record.deletedAt,
+    data: record,
+  };
+}
+
 /** Coalesce concurrent callers into one round trip; a change arriving mid-sync re-runs. */
 export function syncNow(opts?: { full?: boolean }): Promise<SyncOutcome> {
   if (inFlight) {
@@ -86,9 +104,9 @@ async function runSync(full: boolean): Promise<SyncOutcome> {
     ]);
 
     const pushing = {
-      reminders: filterChangedSince(reminders, pushSinceMs),
-      categories: filterChangedSince(categories, pushSinceMs),
-      completions: filterChangedSince(completions, pushSinceMs),
+      reminders: filterChangedSince(reminders, pushSinceMs).map(toEnvelope),
+      categories: filterChangedSince(categories, pushSinceMs).map(toEnvelope),
+      completions: filterChangedSince(completions, pushSinceMs).map(toEnvelope),
     };
 
     const { now, changes } = await api.sync(pullSince, pushing);

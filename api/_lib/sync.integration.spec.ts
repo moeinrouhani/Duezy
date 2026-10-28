@@ -186,5 +186,7 @@ suite('sync server integration', () => {
     const { parseEnvelope } = await import('./sync.js');
     expect(parseEnvelope({ id: 'bad id!', createdAt: '2026-10-27T08:00:00.000Z', updatedAt: '2026-10-27T08:00:00.000Z', deletedAt: null, data: {} }, 1000)).toBeNull();
     expect(parseEnvelope({ id: 'ok-id', createdAt: 'yesterday', updatedAt: '2026-10-27T08:00:00.000Z', deletedAt: null, data: {} }, 1000)).toBeNull();
+    // Bare record with no data payload — the shape old broken clients sent.
+    expect(parseEnvelope({ id: 'ok-id', createdAt: '2026-10-27T08:00:00.000Z', updatedAt: '2026-10-27T08:00:00.000Z', deletedAt: null }, 1000)).toBeNull();
   });
 });

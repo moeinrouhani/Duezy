@@ -3,7 +3,9 @@
  *
  * The server is schema-agnostic about record contents (they're stored as
  * JSONB) but MUST validate the four sync columns it indexes and compares:
- * id + createdAt/updatedAt/deletedAt. Everything else rides along untouched.
+ * id + createdAt/updatedAt/deletedAt — plus the `data` payload itself, since
+ * a row without one is dead weight: every device would silently skip it on
+ * pull. Bare records (payload missing) are rejected, never stored.
  */
 
 export interface ParsedRecord {
@@ -32,6 +34,7 @@ export function parseEnvelope(raw: unknown, maxRecordBytes: number): ParsedRecor
   if (!isRecord(raw)) return null;
   const { id, createdAt, updatedAt, deletedAt, data } = raw;
   if (typeof id !== 'string' || !ID_PATTERN.test(id)) return null;
+  if (!isRecord(data)) return null;
 
   const createdAtIso = parseTimestamp(createdAt);
   const updatedAtIso = parseTimestamp(updatedAt);
@@ -45,7 +48,7 @@ export function parseEnvelope(raw: unknown, maxRecordBytes: number): ParsedRecor
 
   let serialized: string;
   try {
-    serialized = JSON.stringify(data ?? null);
+    serialized = JSON.stringify(data);
   } catch {
     return null;
   }
@@ -56,7 +59,7 @@ export function parseEnvelope(raw: unknown, maxRecordBytes: number): ParsedRecor
     createdAt: createdAtIso,
     updatedAt: updatedAtIso,
     deletedAt: deletedAtIso,
-    data: data ?? null,
+    data,
   };
 }
 
