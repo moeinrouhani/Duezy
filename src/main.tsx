@@ -9,6 +9,7 @@ import { openDatabase } from './db/db';
 import { useSettingsStore } from './stores/settingsStore';
 import { useUiStore } from './stores/uiStore';
 import { registerSW } from 'virtual:pwa-register';
+import { noteServiceWorkerUpdate } from './pwa/update';
 
 async function bootstrap() {
   await openDatabase();
@@ -23,9 +24,11 @@ async function bootstrap() {
     </StrictMode>,
   );
 
-  // PWA: prompt on new version + route notification deep-links.
-  registerSW({
+  // PWA: route notification deep-links; keep the (rare, autoUpdate-mode)
+  // waiting-worker hook so Settings can force an update on demand.
+  const updateSw = registerSW({
     onNeedRefresh() {
+      noteServiceWorkerUpdate(updateSw);
       const { showSnackbar } = useUiStore.getState();
       showSnackbar(i18n.t('common.updateAvailable'), {
         label: i18n.t('common.reload'),

@@ -113,6 +113,36 @@ export function ensureSchema(): Promise<void> {
           PRIMARY KEY (user_id, id)
         )`;
       await sql`CREATE INDEX IF NOT EXISTS completions_sync_idx ON completions (user_id, updated_at)`;
+
+      // v2 migration, idempotent. The PULL cursor compares the updated_at
+      // column against a server-clock timestamp, so that column must hold
+      // SERVER write times. Earlier builds stored the client's edit stamp
+      // there, which silently hid pushed records from any device whose
+      // cursor was ahead of the pushing device's clock. client_updated_at
+      // now carries the client stamp (the LWW basis); updated_at is stamped
+      // by the server on write. The backfill also clamps future-skewed
+      // stamps from misconfigured clocks down to real time.
+      for (const table of ['reminders', 'categories', 'completions'] as const) {
+        if (table === 'reminders') {
+          await sql`ALTER TABLE reminders ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ`;
+          await sql`UPDATE reminders SET
+                client_updated_at = LEAST(COALESCE(client_updated_at, updated_at), now()),
+                updated_at = LEAST(updated_at, now())
+              WHERE client_updated_at IS NULL OR updated_at > now()`;
+        } else if (table === 'categories') {
+          await sql`ALTER TABLE categories ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ`;
+          await sql`UPDATE categories SET
+                client_updated_at = LEAST(COALESCE(client_updated_at, updated_at), now()),
+                updated_at = LEAST(updated_at, now())
+              WHERE client_updated_at IS NULL OR updated_at > now()`;
+        } else {
+          await sql`ALTER TABLE completions ADD COLUMN IF NOT EXISTS client_updated_at TIMESTAMPTZ`;
+          await sql`UPDATE completions SET
+                client_updated_at = LEAST(COALESCE(client_updated_at, updated_at), now()),
+                updated_at = LEAST(updated_at, now())
+              WHERE client_updated_at IS NULL OR updated_at > now()`;
+        }
+      }
     })().catch((error) => {
       schemaPromise = null; // allow a retry on the next request
       throw error;

@@ -1,10 +1,17 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
+
 export default defineConfig({
+  define: {
+    // Shown in Settings → About so a device's running bundle is identifiable.
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -12,7 +19,10 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'prompt',
+      // autoUpdate: a newly deployed worker activates itself, so the next app
+      // open serves the fresh bundle without the user having to react to a
+      // prompt — missed prompts left devices on stale (buggy) builds.
+      registerType: 'autoUpdate',
       injectRegister: null,
       manifest: {
         name: 'Duezy — Due Date Reminders',

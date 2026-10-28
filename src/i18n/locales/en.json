@@ -185,6 +185,8 @@
     "aboutTitle": "About Duezy",
     "aboutBody": "A small, offline-first app for the dates that matter — installments, insurance, bills and appointments. Your data stays on your device.",
     "versionLabel": "Version",
+    "checkUpdates": "Check for updates",
+    "upToDate": "You're on the latest version",
     "accountTitle": "Account & sync",
     "accountHint": "Sign in to keep the same data on all your devices. Your data stays on this device either way."
   },
@@ -210,6 +212,8 @@
     "syncUnavailable": "Sync server isn't configured",
     "lastSyncedAt": "Last sync: {{time}}",
     "neverSynced": "Not synced yet",
+    "receivedCount_one": "{{count}} change received",
+    "receivedCount_other": "{{count}} changes received",
     "signOut": "Sign out",
     "signOutConfirmTitle": "Sign out?",
     "signOutConfirmMessage": "Your data stays on this device; syncing pauses until you sign in again.",

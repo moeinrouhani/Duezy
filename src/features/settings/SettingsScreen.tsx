@@ -15,6 +15,7 @@ import { ACCENTS } from '../../themes/accents';
 import { requestNotificationPermission } from '../../hooks/useNotificationScheduler';
 import { createBackup, downloadBackup, importBackup } from '../../utils/backup';
 import { useUiStore } from '../../stores/uiStore';
+import { applyPendingUpdate } from '../../pwa/update';
 import { syncNow } from '../../sync/engine';
 import { cn } from '../../utils/cn';
 import type { AccentColor, AlertOffset, CalendarSystem, Lang, ThemeMode, Weekday } from '../../domain/types';
@@ -53,6 +54,7 @@ export function SettingsScreen() {
   const signOut = useAuthStore((s) => s.signOut);
   const syncStatus = useSyncStore((s) => s.status);
   const lastSyncedAtMs = useSyncStore((s) => s.lastSyncedAtMs);
+  const lastPulledCount = useSyncStore((s) => s.lastPulledCount);
 
   useEffect(() => {
     setPermission(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
@@ -68,7 +70,9 @@ export function SettingsScreen() {
       hour: '2-digit',
       minute: '2-digit',
     });
-    return t('auth.lastSyncedAt', { time });
+    const line = t('auth.lastSyncedAt', { time });
+    if (lastPulledCount === null) return line;
+    return `${line} · ${t('auth.receivedCount', { count: lastPulledCount })}`;
   };
 
   const onSyncNow = async () => {
@@ -76,6 +80,12 @@ export function SettingsScreen() {
     const outcome = await syncNow({ full: true });
     if (outcome === 'synced') showSnackbar(t('auth.syncedToast'));
     else if (outcome === 'failed') showSnackbar(t('auth.syncError'));
+  };
+
+  const onCheckUpdates = () => {
+    // Applies a waiting service worker and reloads; false = already latest.
+    if (applyPendingUpdate()) return;
+    showSnackbar(t('settings.upToDate'));
   };
 
   const onSignOut = async () => {
@@ -271,9 +281,11 @@ export function SettingsScreen() {
           <Info size={18} className="mt-0.5 shrink-0 text-fg-2" aria-hidden />
           <p className="text-sm leading-6 text-fg-2">{t('settings.aboutBody')}</p>
         </div>
-        <p className="text-xs text-fg-2">
-          {t('settings.versionLabel')} 1.0.0 · {t('app.tagline')}
-        </p>
+        <Row label={`${t('settings.versionLabel')} ${__APP_VERSION__}`} hint={t('app.tagline')}>
+          <Button variant="secondary" onClick={onCheckUpdates}>
+            {t('settings.checkUpdates')}
+          </Button>
+        </Row>
       </Section>
     </div>
   );

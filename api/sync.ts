@@ -3,7 +3,7 @@ import { ensureSchema, NotConfiguredError } from './_lib/db.js';
 import { getUserFromRequest } from './_lib/session.js';
 import { isRateLimited, clientIp, readJsonBody, sendError, sendJson } from './_lib/http.js';
 import { parseEnvelope, parseSince, type ParsedRecord } from './_lib/sync.js';
-import { pullRecords, upsertRecords, type TableName } from './_lib/records.js';
+import { pullRecords, serverNowIso, upsertRecords, type TableName } from './_lib/records.js';
 import type { SyncChanges, SyncResponse } from './_lib/types.js';
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024; // 2 MB per request
@@ -45,6 +45,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
     await ensureSchema();
 
+    // The pull cursor, taken from the DB clock BEFORE anything else in this
+    // request writes: anything written later carries a stamp after it, so a
+    // concurrent edit can never fall between this sync and the next one.
+    const now = await serverNowIso();
+
     const tables: TableName[] = ['reminders', 'categories', 'completions'];
     const parsed: Record<TableName, ParsedRecord[]> = { reminders: [], categories: [], completions: [] };
     let rejected = 0;
@@ -73,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       completions: await pullRecords('completions', user.id, since),
     };
 
-    const response: SyncResponse = { now: new Date().toISOString(), changes };
+    const response: SyncResponse = { now, changes };
     console.log(
       `[sync] ${user.username}: pushed ` +
         `${parsed.reminders.length}r/${parsed.categories.length}c/${parsed.completions.length}x ` +

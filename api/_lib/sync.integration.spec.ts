@@ -53,7 +53,7 @@ suite('sync server integration', () => {
     const { ensureSchema, getSql } = await import('./db.js');
     const { hashPassword } = await import('./auth.js');
     const { parseEnvelope } = await import('./sync.js');
-    const { pullRecords, upsertRecords } = await import('./records.js');
+    const { pullRecords, upsertRecords, serverNowIso } = await import('./records.js');
     const { createSession, destroySession, getUserFromRequest } = await import('./session.js');
 
     await ensureSchema();
@@ -128,6 +128,39 @@ suite('sync server integration', () => {
     const cursor = new Date().toISOString();
     expect(await pullRecords('reminders', userId, cursor)).toHaveLength(0);
     expect(await pullRecords('categories', userId, cursor)).toHaveLength(0);
+
+    // -- REGRESSION (clock skew, lagging device): a push stamped by a client
+    // clock far behind the server must still be pulled — updated_at is a
+    // SERVER write stamp, so the pull cursor never compares across clocks.
+    const skewCursor = await serverNowIso();
+    const lagging = parseEnvelope(
+      {
+        ...reminder,
+        id: `probe-skew-${userId.slice(0, 8)}`,
+        updatedAt: '2020-01-01T00:00:00.000Z',
+        data: { ...reminder.data, id: `probe-skew-${userId.slice(0, 8)}`, title: 'SYNC PROBE laggy clock' },
+      },
+      32_768,
+    );
+    await upsertRecords('reminders', userId, [lagging!]);
+    const pulledSkew = await pullRecords('reminders', userId, skewCursor);
+    expect(pulledSkew).toHaveLength(1);
+    expect((pulledSkew[0] as { title: string }).title).toBe('SYNC PROBE laggy clock');
+
+    // -- REGRESSION (clock skew, fast device): a far-future client stamp is
+    // clamped to server time, so the record stays visible to cursor pulls.
+    const futureCursor = await serverNowIso();
+    const future = parseEnvelope(
+      {
+        ...reminder,
+        id: `probe-future-${userId.slice(0, 8)}`,
+        updatedAt: '2100-01-01T00:00:00.000Z',
+        data: { ...reminder.data, id: `probe-future-${userId.slice(0, 8)}`, title: 'SYNC PROBE future clock' },
+      },
+      32_768,
+    );
+    await upsertRecords('reminders', userId, [future!]);
+    expect(await pullRecords('reminders', userId, futureCursor)).toHaveLength(1);
 
     // -- tombstones: newer stamp + deletedAt in column AND payload ------------
     const deletedAt = '2026-10-27T11:00:00.000Z';

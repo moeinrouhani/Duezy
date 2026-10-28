@@ -105,6 +105,8 @@ async function runSync(full: boolean): Promise<SyncOutcome> {
       lastSyncAt: now,
       lastPushAtMs: pushMarkerMs,
       lastSyncedAtMs: Date.now(),
+      lastPulledCount:
+        changes.reminders.length + changes.categories.length + changes.completions.length,
       status: 'idle',
     });
     await Promise.all([useReminderStore.getState().refresh(), useCategoryStore.getState().refresh()]);
