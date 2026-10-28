@@ -59,6 +59,16 @@ export function getRepositories(): Promise<Repositories> {
           requestSync();
           return reminder;
         },
+        completeOccurrence: async (id, dueDate, opts) => {
+          const result = await reminders.completeOccurrence(id, dueDate, opts);
+          requestSync();
+          return result;
+        },
+        undoOccurrence: async (id, dueDate) => {
+          const reminder = await reminders.undoOccurrence(id, dueDate);
+          requestSync();
+          return reminder;
+        },
         togglePin: async (id) => {
           const reminder = await reminders.togglePin(id);
           requestSync();

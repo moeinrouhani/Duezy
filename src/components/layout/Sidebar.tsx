@@ -1,22 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router';
-import {
-  BellRing,
-  CalendarDays,
-  ChartNoAxesColumn,
-  House,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  Tags,
-} from 'lucide-react';
+import { BellRing, House, ListChecks, Plus, SlidersHorizontal, Tags } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const NAV = [
-  { to: '/', icon: House, key: 'nav.home', end: true },
-  { to: '/calendar', icon: CalendarDays, key: 'nav.calendar' },
-  { to: '/search', icon: Search, key: 'nav.search' },
-  { to: '/stats', icon: ChartNoAxesColumn, key: 'nav.stats' },
+  { to: '/', icon: House, key: 'nav.dashboard', end: true },
+  { to: '/reminders', icon: ListChecks, key: 'nav.reminders' },
   { to: '/categories', icon: Tags, key: 'nav.categories' },
   { to: '/settings', icon: SlidersHorizontal, key: 'nav.settings' },
 ] as const;
@@ -67,7 +56,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <p className="px-3 text-[0.65rem] text-fg-2">v1.0.0</p>
+      <p className="px-3 text-[0.65rem] text-fg-2">{t('settings.versionLabel')} {__APP_VERSION__}</p>
     </aside>
   );
 }

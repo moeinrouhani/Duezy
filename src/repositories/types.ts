@@ -1,6 +1,7 @@
 import type {
   Category,
   CompletionRecord,
+  ISODate,
   Reminder,
   ReminderDraft,
   Settings,
@@ -36,6 +37,19 @@ export interface ReminderRepository {
   }>;
   /** Reverse the latest completion (undo window). */
   undoComplete(id: string): Promise<Reminder>;
+  /**
+   * Settle a SPECIFIC occurrence by due date. When `dueDate` is the current
+   * `dueDate` this behaves exactly like `complete` (advance the pointer or
+   * finish the series); any other occurrence of a series just records the
+   * completion. Idempotent on an already-settled date.
+   */
+  completeOccurrence(
+    id: string,
+    dueDate: ISODate,
+    opts?: { skipped?: boolean },
+  ): Promise<{ reminder: Reminder; completion: CompletionRecord }>;
+  /** Un-settle a specific occurrence (tombstones its completion). */
+  undoOccurrence(id: string, dueDate: ISODate): Promise<Reminder>;
   togglePin(id: string): Promise<Reminder>;
   /** Import path; last-write-wins on updatedAt. */
   bulkPut(records: Reminder[]): Promise<void>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeAlertSlots, sectionOf, slotId } from './alerts';
+import { alertSlotDate, computeAlertSlots, sectionOf, slotId } from './alerts';
 import type { Reminder } from './types';
 import { todayISO } from './date';
 
@@ -63,5 +63,26 @@ describe('domain/alerts', () => {
     expect(sectionOf(reminder({ dueDate: '2100-01-01' }))).toBe('upcoming');
     expect(sectionOf(reminder({ dueDate: '2000-01-01' }))).toBe('overdue');
     expect(sectionOf(reminder({ done: true, dueDate: '2000-01-01' }))).toBe('done');
+  });
+
+  it('a reminder created one minute before its due-day stage alerts ONLY that stage', () => {
+    // Anchored to the computed stage instants so it holds in any timezone.
+    const dueDayStage = alertSlotDate('2026-06-10', 0, '09:00').getTime();
+    const r = reminder({
+      dueDate: '2026-06-10',
+      alerts: { offsets: [3, 1, 0] },
+      updatedAt: new Date(dueDayStage - 60_000).toISOString(),
+    });
+    expect(computeAlertSlots([r], '09:00').map((s) => s.offset)).toEqual([0]);
+  });
+
+  it('stages scheduled after the reminder existed are untouched', () => {
+    const dueDayStage = alertSlotDate('2026-06-10', 0, '09:00').getTime();
+    const r = reminder({
+      dueDate: '2026-06-10',
+      alerts: { offsets: [3, 1, 0] },
+      updatedAt: new Date(dueDayStage - 4 * 86_400_000).toISOString(),
+    });
+    expect(computeAlertSlots([r], '09:00')).toHaveLength(3);
   });
 });

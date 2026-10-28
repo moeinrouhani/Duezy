@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
-import { createHashRouter, RouterProvider } from 'react-router';
+import { createHashRouter, Navigate, RouterProvider } from 'react-router';
 import { AppShell } from './components/layout/AppShell';
-import { HomeScreen } from './features/home/HomeScreen';
-import { CalendarScreen } from './features/calendar/CalendarScreen';
-import { SearchScreen } from './features/search/SearchScreen';
-import { StatsScreen } from './features/stats/StatsScreen';
+import { DashboardScreen } from './features/dashboard/DashboardScreen';
+import { RemindersScreen } from './features/reminders/RemindersScreen';
 import { SettingsScreen } from './features/settings/SettingsScreen';
 import { CategoriesScreen } from './features/categories/CategoriesScreen';
 import { ReminderForm } from './features/reminder-form/ReminderForm';
@@ -22,15 +20,17 @@ export const router = createHashRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <HomeScreen /> },
-      { path: 'calendar', element: <CalendarScreen /> },
-      { path: 'search', element: <SearchScreen /> },
-      { path: 'stats', element: <StatsScreen /> },
+      { index: true, element: <DashboardScreen /> },
+      { path: 'reminders', element: <RemindersScreen /> },
       { path: 'settings', element: <SettingsScreen /> },
       { path: 'categories', element: <CategoriesScreen /> },
       { path: 'reminder/new', element: <ReminderForm /> },
       { path: 'reminder/:id', element: <ReminderDetailScreen /> },
       { path: 'reminder/:id/edit', element: <ReminderForm /> },
+      // Screens merged away — old deep links land on their replacements.
+      { path: 'calendar', element: <Navigate to="/" replace /> },
+      { path: 'search', element: <Navigate to="/reminders" replace /> },
+      { path: 'stats', element: <Navigate to="/reminders" replace /> },
     ],
   },
   { path: '/auth', element: <AuthScreen /> },

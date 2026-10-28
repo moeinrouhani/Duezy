@@ -1,15 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router';
-import { CalendarDays, ChartNoAxesColumn, House, Plus, SlidersHorizontal } from 'lucide-react';
+import { House, ListChecks, Plus, SlidersHorizontal, Tags } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const ITEMS = [
-  { to: '/', icon: House, key: 'nav.home' },
-  { to: '/calendar', icon: CalendarDays, key: 'nav.calendar' },
+  { to: '/', icon: House, key: 'nav.dashboard' },
+  { to: '/reminders', icon: ListChecks, key: 'nav.reminders' },
 ] as const;
 
 const END_ITEMS = [
-  { to: '/stats', icon: ChartNoAxesColumn, key: 'nav.stats' },
+  { to: '/categories', icon: Tags, key: 'nav.categories' },
   { to: '/settings', icon: SlidersHorizontal, key: 'nav.settings' },
 ] as const;
 
@@ -37,7 +37,7 @@ export function BottomNav() {
 
   return (
     <nav
-      aria-label={t('nav.home')}
+      aria-label={t('nav.dashboard')}
       className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur md:hidden"
     >
       <div className="mx-auto flex max-w-md items-stretch px-2">

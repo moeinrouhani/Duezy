@@ -1,6 +1,7 @@
 import type { DuezyDB } from '../db/db';
-import type { Reminder, ReminderDraft, Timestamp } from '../domain/types';
+import type { ISODate, Reminder, ReminderDraft, Timestamp } from '../domain/types';
 import { nextOccurrence } from '../domain/recurrence';
+import { compareISO } from '../domain/date';
 import { createReminder } from '../domain/defaults';
 import { newId } from '../utils/id';
 import type { CompletionRecord } from '../domain/types';
@@ -91,13 +92,87 @@ export class DexieReminderRepository implements ReminderRepository {
         .filter((c) => !c.deletedAt)
         .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
       if (!latest) throw new Error(`No completion to undo for ${id}`);
-      await this.db.completions.delete(latest.id);
+      // Tombstone, never hard-delete: the sync server keeps its copy, and a
+      // local hard delete would simply re-arrive on the next pull.
+      await this.db.completions.put({ ...latest, deletedAt: now, updatedAt: now });
 
       const reminder = await this.db.reminders.get(id);
       if (!reminder) throw new Error(`Reminder ${id} not found`);
       const restored: Reminder = {
         ...reminder,
         dueDate: latest.dueDateCompleted,
+        done: false,
+        updatedAt: now,
+      };
+      await this.db.reminders.put(restored);
+      return restored;
+    });
+  }
+
+  async completeOccurrence(
+    id: string,
+    dueDate: ISODate,
+    opts?: { skipped?: boolean },
+  ): Promise<{ reminder: Reminder; completion: CompletionRecord }> {
+    const now: Timestamp = new Date().toISOString();
+    return this.db.transaction('rw', this.db.reminders, this.db.completions, async () => {
+      const reminder = await this.db.reminders.get(id);
+      if (!reminder || reminder.deletedAt) throw new Error(`Reminder ${id} not found or deleted`);
+
+      // Idempotent: an already-settled occurrence stays settled.
+      const existing = (await this.db.completions.where('reminderId').equals(id).toArray()).find(
+        (c) => !c.deletedAt && c.dueDateCompleted === dueDate,
+      );
+      if (existing) return { reminder, completion: existing };
+
+      const completion: CompletionRecord = {
+        id: newId(),
+        reminderId: id,
+        dueDateCompleted: dueDate,
+        completedAt: now,
+        skipped: opts?.skipped ?? false,
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: null,
+      };
+      await this.db.completions.put(completion);
+
+      let updated: Reminder;
+      if (compareISO(dueDate, reminder.dueDate) === 0 && !reminder.done) {
+        // The current occurrence: advance the pointer or finish the series —
+        // exactly like complete().
+        const next = reminder.recurrence ? nextOccurrence(reminder.recurrence, reminder.dueDate) : null;
+        updated = next
+          ? { ...reminder, dueDate: next, updatedAt: now }
+          : { ...reminder, done: true, updatedAt: now };
+      } else {
+        // A different occurrence of the series (typically an overdue past
+        // one) — the pointer already sits past it; bump for sync only.
+        updated = { ...reminder, updatedAt: now };
+      }
+      await this.db.reminders.put(updated);
+      return { reminder: updated, completion };
+    });
+  }
+
+  async undoOccurrence(id: string, dueDate: ISODate): Promise<Reminder> {
+    const now: Timestamp = new Date().toISOString();
+    return this.db.transaction('rw', this.db.reminders, this.db.completions, async () => {
+      const completions = await this.db.completions.where('reminderId').equals(id).toArray();
+      const target = completions
+        .filter((c) => !c.deletedAt && c.dueDateCompleted === dueDate)
+        .sort((a, b) => b.completedAt.localeCompare(a.completedAt))[0];
+      if (!target) throw new Error(`No completion of ${dueDate} to undo for ${id}`);
+      // Tombstone so the un-check syncs; a hard delete would re-arrive from
+      // the server and silently re-check the occurrence.
+      await this.db.completions.put({ ...target, deletedAt: now, updatedAt: now });
+
+      const reminder = await this.db.reminders.get(id);
+      if (!reminder) throw new Error(`Reminder ${id} not found`);
+      const restored: Reminder = {
+        ...reminder,
+        // Undoing the pointer occurrence (or a finished series) revives it.
+        dueDate: compareISO(dueDate, reminder.dueDate) >= 0 ? dueDate : reminder.dueDate,
         done: false,
         updatedAt: now,
       };

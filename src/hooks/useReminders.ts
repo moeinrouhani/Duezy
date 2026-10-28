@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getRepositories } from '../repositories';
 import { useReminderStore, useCategoryStore } from '../stores/dataStores';
 import { useUiStore } from '../stores/uiStore';
-import type { Reminder, ReminderDraft } from '../domain/types';
+import type { ISODate, Reminder, ReminderDraft } from '../domain/types';
 
 /**
  * CRUD facade over the repositories. Every action refreshes the mirror store;
@@ -97,7 +97,51 @@ export function useReminders() {
     [refresh],
   );
 
-  return { reminders, loading, refresh, create, update, remove, complete, undoComplete, togglePin };
+  /** Settle one concrete occurrence (dashboard check marks). */
+  const completeOccurrence = useCallback(
+    async (id: string, dueDate: ISODate, opts?: { skipped?: boolean }) => {
+      const repos = await getRepositories();
+      const { completion } = await repos.reminders.completeOccurrence(id, dueDate, opts);
+      await refresh();
+      showSnackbar(t(opts?.skipped ? 'detail.skippedToast' : 'detail.completedToast'), {
+        label: t('common.undo'),
+        onAction: () => {
+          void (async () => {
+            await repos.reminders.undoOccurrence(id, dueDate);
+            await refresh();
+            showSnackbar(t('detail.undoneToast'));
+          })();
+        },
+      });
+      return completion;
+    },
+    [refresh, showSnackbar, t],
+  );
+
+  /** Un-settle one concrete occurrence (dashboard uncheck). */
+  const undoOccurrence = useCallback(
+    async (id: string, dueDate: ISODate) => {
+      const repos = await getRepositories();
+      await repos.reminders.undoOccurrence(id, dueDate);
+      await refresh();
+      showSnackbar(t('detail.undoneToast'));
+    },
+    [refresh, showSnackbar, t],
+  );
+
+  return {
+    reminders,
+    loading,
+    refresh,
+    create,
+    update,
+    remove,
+    complete,
+    undoComplete,
+    togglePin,
+    completeOccurrence,
+    undoOccurrence,
+  };
 }
 
 export function useCategories() {

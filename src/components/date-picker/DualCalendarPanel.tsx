@@ -19,6 +19,9 @@ interface Props {
   onChange: (iso: ISODate) => void;
   /** Optional per-day dots (calendar screen). */
   marks?: Record<ISODate, DayMark>;
+  /** Controlled visible month — the dashboard derives its list from it. */
+  month?: { y: number; m: number };
+  onMonthChange?: (month: { y: number; m: number }) => void;
 }
 
 /** {y, m} in the ACTIVE calendar space — conversions happen only per-cell. */
@@ -58,15 +61,18 @@ function dayISO({ y, m }: CalendarMonth, day: number, calendar: 'jalali' | 'greg
  * calendar space; cells convert to ISO only to compare/select and to look up
  * marks, so switching systems never drifts.
  */
-export function DualCalendarPanel({ calendar, weekStart, value, onChange, marks }: Props) {
+export function DualCalendarPanel({ calendar, weekStart, value, onChange, marks, month, onMonthChange }: Props) {
   const { t } = useTranslation();
   const localDate = useLocalDate();
   const today = todayISO();
-  const [view, setView] = useState<CalendarMonth>(() => monthOf(value ?? today, calendar));
+  const [internalView, setInternalView] = useState<CalendarMonth>(() => monthOf(value ?? today, calendar));
+  const view = month ?? internalView;
+  const updateView = (next: CalendarMonth) => (onMonthChange ? onMonthChange(next) : setInternalView(next));
 
-  // Re-derive the visible month when the calendar system (or value) changes.
+  // Re-derive the visible month when the calendar system changes. Controlled
+  // mode only tracks it — the parent owns the month there.
   useEffect(() => {
-    setView(monthOf(value ?? today, calendar));
+    if (month === undefined) setInternalView(monthOf(value ?? today, calendar));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calendar]);
 
@@ -86,11 +92,11 @@ export function DualCalendarPanel({ calendar, weekStart, value, onChange, marks 
     <div>
       <YearMonthNav
         label={localDate.monthYearLabel(view.y, view.m)}
-        onPrev={() => setView((v) => addMonths(v, -1))}
-        onNext={() => setView((v) => addMonths(v, 1))}
+        onPrev={() => updateView(addMonths(view, -1))}
+        onNext={() => updateView(addMonths(view, 1))}
         onToday={
           (view.y !== todayMonth.y || view.m !== todayMonth.m)
-            ? () => setView(todayMonth)
+            ? () => updateView(todayMonth)
             : undefined
         }
       />

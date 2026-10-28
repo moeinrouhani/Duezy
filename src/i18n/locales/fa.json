@@ -4,11 +4,9 @@
     "tagline": "دیگر هیچ موعدی را از دست ندهید"
   },
   "nav": {
-    "home": "خانه",
-    "calendar": "تقویم",
-    "stats": "آمار",
+    "dashboard": "میزکار",
+    "reminders": "یادآورها",
     "settings": "تنظیمات",
-    "search": "جستجو",
     "categories": "دسته‌بندی‌ها",
     "add": "یادآور جدید"
   },
@@ -36,15 +34,28 @@
     "reload": "بارگذاری مجدد"
   },
   "home": {
-    "overdue": "سررسید گذشته",
-    "todaySection": "امروز",
-    "upcoming": "آینده",
-    "doneSection": "انجام‌شده‌ها",
-    "showDone": "نمایش انجام‌شده‌ها",
-    "hideDone": "پنهان کردن انجام‌شده‌ها",
     "emptyTitle": "هنوز یادآوری ندارید",
     "emptyBody": "اولین موعدتان را اضافه کنید؛ مثلاً قسط بانک، تمدید بیمه یا یک قبض.",
     "addFirst": "افزودن یادآور"
+  },
+  "dashboard": {
+    "filterAll": "همه",
+    "filterPending": "پرداخت‌نشده",
+    "filterDone": "پرداخت‌شده",
+    "filterOverdue": "سررسید گذشته",
+    "uncheck": "برداشتن علامت پرداخت",
+    "emptyMonth": "این ماه موعدی ندارید",
+    "dueLabel": "موعد",
+    "paidLabel": "پرداخت‌شده",
+    "unpaidLabel": "پرداخت‌نشده"
+  },
+  "reminders": {
+    "tabList": "یادآورها",
+    "tabStats": "آمار",
+    "filterAll": "همه",
+    "filterActive": "باز",
+    "filterDone": "انجام‌شده",
+    "settledCount_other": "{{count}} دوره ثبت شده"
   },
   "card": {
     "recurring": "تکرارشونده",
@@ -124,9 +135,6 @@
     "deleteMessage": "از همه فهرست‌ها حذف می‌شود؛ بلافاصله بعدش می‌توانید بازگردانید."
   },
   "calendar": {
-    "title": "تقویم",
-    "remindersOnDay": "یادآورهای این روز",
-    "noneOnDay": "این روز موعدی ندارد",
     "todayButton": "امروز"
   },
   "search": {

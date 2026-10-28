@@ -99,3 +99,26 @@ export function upcomingOccurrences(
   }
   return result;
 }
+
+/**
+ * Every series occurrence within [rangeStart, rangeEnd], oldest first, with
+ * its 1-based index (`start` is occurrence #1 — same convention as
+ * nextOccurrence/end.after). Honors `end.on` / `end.after` boundaries.
+ */
+export function occurrencesInRange(
+  rule: RecurrenceRule,
+  rangeStart: ISODate,
+  rangeEnd: ISODate,
+): { date: ISODate; index: number }[] {
+  const out: { date: ISODate; index: number }[] = [];
+  let cursor = rule.start;
+  let index = 1;
+  while (compareISO(cursor, rangeEnd) <= 0 && index <= MAX_WALK) {
+    if (rule.end.type === 'on' && compareISO(cursor, rule.end.date) > 0) break;
+    if (rule.end.type === 'after' && index > rule.end.count) break;
+    if (compareISO(cursor, rangeStart) >= 0) out.push({ date: cursor, index });
+    cursor = stepOccurrence(rule, cursor);
+    index++;
+  }
+  return out;
+}

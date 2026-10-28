@@ -31,13 +31,24 @@ export function buildSlot(reminder: Reminder, offset: AlertOffset, notifyTime: s
   };
 }
 
-/** All alert slots for active reminders (caller filters by time / fired-log). */
+/**
+ * All alert slots for active reminders (caller filters by time / fired-log).
+ *
+ * Slots scheduled BEFORE the reminder's current `updatedAt` are skipped: a
+ * reminder created on its due day with 3/1/0-day offsets would otherwise fire
+ * every already-past stage at once. Completion advances the occurrence and
+ * bumps `updatedAt`, so retroactive stages of the regenerated date are cut
+ * too; genuinely future stages are untouched.
+ */
 export function computeAlertSlots(reminders: Reminder[], notifyTime: string): AlertSlot[] {
   const slots: AlertSlot[] = [];
   for (const reminder of reminders) {
     if (reminder.done || reminder.deletedAt) continue;
+    const existsSinceMs = Date.parse(reminder.updatedAt);
     for (const offset of reminder.alerts.offsets) {
-      slots.push(buildSlot(reminder, offset, notifyTime));
+      const slot = buildSlot(reminder, offset, notifyTime);
+      if (Number.isFinite(existsSinceMs) && slot.at.getTime() < existsSinceMs) continue;
+      slots.push(slot);
     }
   }
   return slots;

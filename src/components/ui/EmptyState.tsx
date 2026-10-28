@@ -34,6 +34,9 @@ export function Chip({ children, active, onClick, className }: ChipProps) {
   const Tag = interactive ? 'button' : 'span';
   return (
     <Tag
+      // Buttons default to type="submit" — inside a form (e.g. the reminder
+      // form's alert chips) that would submit on every tap.
+      type={interactive ? 'button' : undefined}
       onClick={onClick}
       aria-pressed={interactive ? active : undefined}
       className={cn(

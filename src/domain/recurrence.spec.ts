@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RecurrenceRule } from './types';
-import { isSeriesExhausted, nextOccurrence, upcomingOccurrences } from './recurrence';
+import { isSeriesExhausted, nextOccurrence, occurrencesInRange, upcomingOccurrences } from './recurrence';
 import { jalaliToISO } from './jalali';
 
 function rule(partial: Partial<RecurrenceRule>): RecurrenceRule {
@@ -85,5 +85,36 @@ describe('domain/recurrence', () => {
   it('upcomingOccurrences stops when the series ends', () => {
     const bounded = rule({ start: '2026-01-01', end: { type: 'after', count: 2 } });
     expect(upcomingOccurrences(bounded, '2026-01-01', 5)).toEqual(['2026-02-01']);
+  });
+});
+
+describe('occurrencesInRange', () => {
+  it('returns only in-range occurrences with 1-based series indices', () => {
+    const rows = occurrencesInRange(rule({}), '2026-02-01', '2026-04-30');
+    expect(rows.map((r) => r.date)).toEqual(['2026-02-15', '2026-03-15', '2026-04-15']);
+    expect(rows.map((r) => r.index)).toEqual([2, 3, 4]);
+  });
+
+  it('honors end.after: a 5-occurrence series stops there', () => {
+    const five = rule({ end: { type: 'after', count: 5 } });
+    expect(occurrencesInRange(five, '2026-01-01', '2999-12-31')).toHaveLength(5);
+    // May 15 is occurrence #5 — the last one.
+    expect(occurrencesInRange(five, '2026-05-01', '2999-12-31')).toHaveLength(1);
+  });
+
+  it('honors end.on as an inclusive boundary', () => {
+    const until = rule({ end: { type: 'on', date: '2026-03-15' } });
+    const rows = occurrencesInRange(until, '2026-01-01', '2026-12-31');
+    expect(rows.map((r) => r.date)).toEqual(['2026-01-15', '2026-02-15', '2026-03-15']);
+  });
+
+  it('jalali monthly stepping keeps the jalali day-of-month', () => {
+    const jalali = rule({ calendar: 'jalali', start: jalaliToISO(1405, 8, 15) });
+    const rows = occurrencesInRange(jalali, jalaliToISO(1405, 8, 1), jalaliToISO(1405, 10, 29));
+    expect(rows.map((r) => r.date)).toEqual([
+      jalaliToISO(1405, 8, 15),
+      jalaliToISO(1405, 9, 15),
+      jalaliToISO(1405, 10, 15),
+    ]);
   });
 });

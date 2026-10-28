@@ -18,7 +18,7 @@ function useKeyboardShortcuts() {
         navigate('/reminder/new');
       } else if (event.key === '/') {
         event.preventDefault();
-        navigate('/search');
+        navigate('/reminders');
       }
     };
     window.addEventListener('keydown', onKey);
@@ -33,7 +33,9 @@ export function AppShell() {
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
-      <main className="min-w-0 flex-1">
+      {/* Standalone PWA on notched phones draws under the status bar
+          (viewport-fit=cover) — pad the content clear of it. */}
+      <main className="min-w-0 flex-1 pt-[env(safe-area-inset-top)]">
         <div key={location.pathname} className="mx-auto w-full max-w-xl px-4 pt-4 pb-28 sm:max-w-2xl md:pb-10">
           <Outlet />
         </div>

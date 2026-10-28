@@ -17,6 +17,13 @@ interface ModalProps {
 
 export function Modal({ open, onClose, title, children, variant = 'center', className }: ModalProps) {
   const ref = useRef<HTMLDivElement>(null);
+  // Latest-callback ref: the focus effect must run only on open/close. Keying
+  // it on `onClose` re-ran it on every parent render — and parents re-render
+  // on every keystroke — repeatedly yanking focus out of inputs mid-typing.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -24,7 +31,7 @@ export function Modal({ open, onClose, title, children, variant = 'center', clas
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation();
-        onClose();
+        onCloseRef.current();
       }
     };
     document.addEventListener('keydown', onKey);
@@ -34,7 +41,7 @@ export function Modal({ open, onClose, title, children, variant = 'center', clas
       document.removeEventListener('keydown', onKey);
       previouslyFocused?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -66,7 +73,9 @@ export function Modal({ open, onClose, title, children, variant = 'center', clas
             </IconButton>
           </div>
         )}
-        <div className="p-5">{children}</div>
+        {/* Bottom sheets reach the physical screen edge — keep content above
+            the gesture bar / home indicator on notched phones. */}
+        <div className="p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">{children}</div>
       </div>
     </div>,
     document.body,

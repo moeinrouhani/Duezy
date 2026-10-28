@@ -1,43 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartNoAxesColumn } from 'lucide-react';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getRepositories } from '../../repositories';
 import { useReminders, useCategories } from '../../hooks/useReminders';
+import { useCompletions } from '../../hooks/useCompletions';
 import { computeStats } from '../../domain/stats';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { formatNumber } from '../../utils/digits';
 import { useLocalDate } from '../../hooks/useLocalDate';
 import { cn } from '../../utils/cn';
 
-export function StatsScreen() {
+/**
+ * Statistics body, embedded as the Reminders screen's second tab.
+ */
+export function StatsPanel() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === 'en' ? 'en' : 'fa';
   const { reminders } = useReminders();
   const { categories } = useCategories();
   const localDate = useLocalDate();
-  const [completions, setCompletions] = useState<Awaited<ReturnType<typeof getCompletions>>>([]);
-
-  async function getCompletions() {
-    const repos = await getRepositories();
-    return repos.completions.listAll();
-  }
-
-  useEffect(() => {
-    void getCompletions().then(setCompletions);
-  }, [reminders]);
+  const completions = useCompletions();
 
   const stats = useMemo(() => computeStats(reminders, completions), [reminders, completions]);
   const maxDay = Math.max(1, ...stats.last30.map((day) => day.count));
 
   if (stats.completedTotal === 0 && stats.activeCount === 0) {
-    return (
-      <div>
-        <PageHeader title={t('stats.title')} />
-        <EmptyState icon={<ChartNoAxesColumn size={26} aria-hidden />} title={t('stats.noData')} />
-      </div>
-    );
+    return <EmptyState icon={<ChartNoAxesColumn size={26} aria-hidden />} title={t('stats.noData')} />;
   }
 
   const cards = [
@@ -52,8 +40,6 @@ export function StatsScreen() {
 
   return (
     <div>
-      <PageHeader title={t('stats.title')} />
-
       <div className="grid grid-cols-2 gap-3">
         {cards.map((card) => (
           <div key={card.label} className="rounded-2xl border border-line bg-surface p-4">

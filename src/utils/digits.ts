@@ -17,6 +17,14 @@ export function formatNumber(value: number, lang: Lang): string {
   return toFaDigits(grouped).replace(/,/g, '٬');
 }
 
+/**
+ * Localized year — never thousands-grouped. Years are identifiers, not
+ * quantities: ۱۴۰۵, not ۱٬۴۰۵.
+ */
+export function formatYear(value: number, lang: Lang): string {
+  return lang === 'fa' ? toFaDigits(String(value)) : String(value);
+}
+
 /** Localized number from an arbitrary string/number (i18n interpolation hook). */
 export function localizeNumeric(value: string | number, lang: Lang): string {
   if (typeof value === 'number') return formatNumber(value, lang);

@@ -4,7 +4,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import type { CalendarSystem, ISODate, Lang, Weekday } from '../domain/types';
 import { daysUntil, parseISODate } from '../domain/date';
 import { toJalali } from '../domain/jalali';
-import { formatNumber } from '../utils/digits';
+import { formatNumber, formatYear } from '../utils/digits';
 
 export interface LocalDateFormatter {
   /** '۱۵ آبان ۱۴۰۵' / '15 Aban 1405' / '۱۵ ژانویه ۲۰۲۶' / '15 January 2026' */
@@ -49,7 +49,7 @@ export function useLocalDate(): LocalDateFormatter {
 
     const fmt = (iso: ISODate): string => {
       const p = parts(iso);
-      return formatNumber(p.day, lang) + ' ' + monthName(p.system, p.month) + ' ' + formatNumber(p.year, lang);
+      return formatNumber(p.day, lang) + ' ' + monthName(p.system, p.month) + ' ' + formatYear(p.year, lang);
     };
 
     return {
@@ -60,7 +60,7 @@ export function useLocalDate(): LocalDateFormatter {
       },
       dayNumber: (day) => formatNumber(day, lang),
       monthYearLabel: (year, month1based) =>
-        `${monthName(calendar, month1based)} ${formatNumber(year, lang)}`,
+        `${monthName(calendar, month1based)} ${formatYear(year, lang)}`,
       relative: (iso) => {
         const n = daysUntil(iso);
         if (n === 0) return t('common.today');

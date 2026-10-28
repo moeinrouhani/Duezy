@@ -214,7 +214,8 @@ export function ReminderForm() {
           )}
         </div>
 
-        <div className="sticky bottom-20 z-10 flex gap-3 bg-bg/80 py-2 backdrop-blur md:bottom-2">
+        {/* Clears the bottom nav plus the phone's gesture-bar inset. */}
+        <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex gap-3 bg-bg/80 py-2 backdrop-blur md:bottom-2">
           <Button type="button" variant="secondary" className="flex-1" onClick={() => navigate(-1)}>
             {t('common.cancel')}
           </Button>

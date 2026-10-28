@@ -4,11 +4,9 @@
     "tagline": "Never miss a due date"
   },
   "nav": {
-    "home": "Home",
-    "calendar": "Calendar",
-    "stats": "Stats",
+    "dashboard": "Dashboard",
+    "reminders": "Reminders",
     "settings": "Settings",
-    "search": "Search",
     "categories": "Categories",
     "add": "New reminder"
   },
@@ -39,15 +37,29 @@
     "reload": "Reload"
   },
   "home": {
-    "overdue": "Overdue",
-    "todaySection": "Today",
-    "upcoming": "Upcoming",
-    "doneSection": "Done",
-    "showDone": "Show done",
-    "hideDone": "Hide done",
     "emptyTitle": "No reminders yet",
     "emptyBody": "Add your first due date — a loan installment, an insurance renewal, a bill.",
     "addFirst": "Add a reminder"
+  },
+  "dashboard": {
+    "filterAll": "All",
+    "filterPending": "To pay",
+    "filterDone": "Paid",
+    "filterOverdue": "Overdue",
+    "uncheck": "Mark as not paid",
+    "emptyMonth": "Nothing due this month",
+    "dueLabel": "Due",
+    "paidLabel": "Paid",
+    "unpaidLabel": "Unpaid"
+  },
+  "reminders": {
+    "tabList": "Reminders",
+    "tabStats": "Statistics",
+    "filterAll": "All",
+    "filterActive": "Open",
+    "filterDone": "Done",
+    "settledCount_one": "{{count}} occurrence settled",
+    "settledCount_other": "{{count}} occurrences settled"
   },
   "card": {
     "recurring": "Recurring",
@@ -128,9 +140,6 @@
     "deleteMessage": "It disappears from all lists. You can undo right after."
   },
   "calendar": {
-    "title": "Calendar",
-    "remindersOnDay": "Reminders on this day",
-    "noneOnDay": "Nothing due on this day",
     "todayButton": "Today"
   },
   "search": {
