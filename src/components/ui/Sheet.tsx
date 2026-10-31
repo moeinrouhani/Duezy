@@ -65,10 +65,15 @@ export function Sheet({ open, onClose, label, children, className }: SheetProps)
   const state = open ? 'open' : 'closed';
 
   return createPortal(
+    // touch-none: iOS otherwise routes touches on a fixed, non-scrollable
+    // layer to the page beneath — the dimmed area must never scroll it.
     <div
       data-state={state}
-      className="overlay-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/45 backdrop-blur-[3px]"
-      onMouseDown={(event) => {
+      className="overlay-backdrop fixed inset-0 z-50 flex touch-none items-end justify-center bg-black/45 backdrop-blur-[3px]"
+      onClick={(event) => {
+        // Dismiss on click, not mousedown: closing mid-gesture unmounts the
+        // backdrop before the browser dispatches click, and the tap then
+        // re-hit-tests onto whatever button sits behind it.
         if (event.target === event.currentTarget) onClose();
       }}
     >
@@ -80,9 +85,11 @@ export function Sheet({ open, onClose, label, children, className }: SheetProps)
         aria-label={label}
         tabIndex={-1}
         className={cn(
-          // Phones: full-width docked sheet. Wide screens: same sheet, but a
-          // centered column — full-bleed across a monitor looks like a wall.
-          'overlay-panel overlay-sheet flex max-h-[92dvh] w-full sm:max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-surface text-fg-1 shadow-pop outline-none',
+          // Phones: a large-detent sheet (~80dvh), never edge-to-edge height.
+          // Wide screens: the same sheet as a centered column.
+          // overscroll-contain: reaching the sheet's scroll end must not
+          // chain the gesture into the page behind.
+          'overlay-panel overlay-sheet flex max-h-[80dvh] w-full sm:max-w-lg flex-col overflow-y-auto overscroll-contain rounded-t-3xl bg-surface text-fg-1 shadow-pop outline-none',
           className,
         )}
       >

@@ -38,3 +38,15 @@ export function parseAmount(input: string): number | undefined {
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : undefined;
 }
+
+/**
+ * Format an amount AS THE USER TYPES: digits only, thousands-grouped and
+ * localized ('2500000' → '2,500,000' / '۲٬۵۰۰٬۰۰۰'). parseAmount still reads
+ * the grouped text back, so storage is unaffected.
+ */
+export function formatAmountInput(text: string, lang: Lang): string {
+  const latin = toLatinDigits(text).replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+  if (!latin) return '';
+  const grouped = latin.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return lang === 'fa' ? toFaDigits(grouped).replace(/,/g, '٬') : grouped;
+}

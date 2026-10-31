@@ -14,7 +14,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { todayISO } from '../../domain/date';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { cn } from '../../utils/cn';
-import { parseAmount } from '../../utils/digits';
+import { parseAmount, formatAmountInput } from '../../utils/digits';
 import type { AlertOffset, ReminderDraft } from '../../domain/types';
 import { AlertPicker } from './AlertPicker';
 import {
@@ -26,7 +26,8 @@ import {
 } from './RecurrenceEditor';
 
 export function ReminderForm() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === 'en' ? 'en' : 'fa';
   const navigate = useNavigate();
   const { id } = useParams();
   const editing = id !== undefined;
@@ -202,7 +203,7 @@ export function ReminderForm() {
                   placeholder={t('form.amountPlaceholder')}
                   value={amountText}
                   inputMode="decimal"
-                  onChange={(event) => setAmountText(event.target.value)}
+                  onChange={(event) => setAmountText(formatAmountInput(event.target.value, lang))}
                 />
                 <Input
                   label={t('form.currencyLabel')}

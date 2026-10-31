@@ -70,7 +70,10 @@ export function Modal({ open, onClose, title, children, variant = 'center', clas
     <div
       data-state={state}
       className="overlay-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-[3px] sm:items-center sm:p-6"
-      onMouseDown={(event) => {
+      onClick={(event) => {
+        // Dismiss on click, not mousedown: closing mid-gesture unmounts the
+        // backdrop before the browser dispatches click, and the tap then
+        // re-hit-tests onto whatever button sits behind it.
         if (event.target === event.currentTarget) onClose();
       }}
     >

@@ -83,17 +83,13 @@ export function StatsPanel() {
         ]}
       />
 
+      {/* Every card is scoped to the selected window — the interval drives
+          the numbers, not just the chart. */}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <StatCard index={0} lang={lang} label={t('stats.activeLabel')} value={stats.activeCount} />
-        <StatCard
-          index={1}
-          lang={lang}
-          label={t('stats.overdueLabel')}
-          value={stats.overdueCount}
-          danger={stats.overdueCount > 0}
-        />
-        <StatCard index={2} lang={lang} label={t('stats.completedLabel')} value={stats.completedTotal} />
-        <StatCard index={3} lang={lang} label={t('stats.onTimeLabel')} value={stats.onTimeRate} suffix="%" />
+        <StatCard index={0} lang={lang} label={t('stats.completedLabel')} value={stats.completedTotal} />
+        <StatCard index={1} lang={lang} label={t('stats.onTimeLabel')} value={stats.onTimeRate} suffix="%" />
+        <StatCard index={2} lang={lang} label={t('stats.lateLabel')} value={stats.lateTotal} danger={stats.lateTotal > 0} />
+        <StatCard index={3} lang={lang} label={t('stats.skippedLabel')} value={stats.skippedTotal} />
       </div>
 
       <section className="mt-6">

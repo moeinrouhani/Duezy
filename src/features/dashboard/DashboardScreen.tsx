@@ -243,13 +243,19 @@ function MonthStatsCard({
   return (
     <section className="overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
       <div className="grid grid-cols-3 [&>*+*]:border-s [&>*+*]:border-line">
-        <StatCell label={t('dashboard.dueLabel')} value={summary.count} lang={lang} tone="neutral" />
+        <StatCell 
+          label={t('dashboard.dueLabel')} 
+          value={summary.count}
+          lang={lang}
+          tone="neutral" 
+          money={summary.money.map((m) => `${formatNumber(m.total, lang)}${m.currency ? ` ${m.currency}` : ''}`)}
+        />
         <StatCell
           label={t('dashboard.paidLabel')}
           value={summary.paidCount}
           lang={lang}
           tone="positive"
-          money={summary.money.map((m) => `${formatNumber(m.paid, lang)}/${formatNumber(m.total, lang)}${m.currency ? ` ${m.currency}` : ''}`)}
+          money={summary.money.map((m) => `${formatNumber(m.paid, lang)}${m.currency ? ` ${m.currency}` : ''}`)}
         />
         <StatCell
           label={t('dashboard.unpaidLabel')}
