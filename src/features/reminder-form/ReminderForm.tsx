@@ -66,7 +66,7 @@ export function ReminderForm() {
       setTitle(reminder.title);
       setDueDate(reminder.dueDate);
       setCategoryId(reminder.categoryId);
-      setAmountText(reminder.amount !== undefined ? String(reminder.amount) : '');
+      setAmountText(reminder.amount !== undefined ? formatAmountInput(String(reminder.amount), lang) : '');
       setCurrency(reminder.currency ?? '');
       setNotes(reminder.notes ?? '');
       setAlerts(reminder.alerts.offsets);
