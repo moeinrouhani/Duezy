@@ -160,6 +160,8 @@
   },
   "stats": {
     "title": "Stats",
+    "dueLabel": "Due",
+    "settledLabel": "Settled",
     "activeLabel": "Active",
     "overdueLabel": "Overdue",
     "completedLabel": "Completed",

@@ -36,16 +36,29 @@ function completionAt(daysAgo: number, partial: Partial<CompletionRecord> = {}):
 }
 
 describe('domain/stats', () => {
-  it('windows completions to the requested interval (default 30 days)', () => {
+  it('counts a due-but-unsettled reminder as missed, per window', () => {
+    // The reported case: a reminder due 38 days ago, never settled.
+    const past = reminder({ dueDate: addDaysISO(todayISO(), -38) });
+    expect(computeStats([past], [], 7)).toMatchObject({ dueCount: 0, settledCount: 0, missedCount: 0 });
+    expect(computeStats([past], [], 30)).toMatchObject({ dueCount: 0, missedCount: 0 });
+    expect(computeStats([past], [], 90)).toMatchObject({ dueCount: 1, settledCount: 0, missedCount: 1 });
+  });
+
+  it('a settled occurrence counts as due + settled, not missed', () => {
+    const day = addDaysISO(todayISO(), -3);
+    const r = reminder({ dueDate: day });
+    const completions = [{ ...completionAt(3), dueDateCompleted: day }];
+    expect(computeStats([r], completions, 7)).toMatchObject({ dueCount: 1, settledCount: 1, missedCount: 0 });
+  });
+
+  it('completion-derived values are windowed (skips, on-time)', () => {
     const reminders = [reminder({})];
     const completions = [
-      completionAt(2), // in every window
-      completionAt(20), // in the 30- and 90-day windows
-      completionAt(60), // only in the 90-day window
+      completionAt(2), // on time, in every window
+      completionAt(60, { skipped: true }), // only in the 90-day window
     ];
-    expect(computeStats(reminders, completions, 7).completedTotal).toBe(1);
-    expect(computeStats(reminders, completions, 30).completedTotal).toBe(2);
-    expect(computeStats(reminders, completions, 90).completedTotal).toBe(3);
+    expect(computeStats(reminders, completions, 7)).toMatchObject({ skippedTotal: 0, onTimeRate: 100 });
+    expect(computeStats(reminders, completions, 90)).toMatchObject({ skippedTotal: 1, onTimeRate: 100 });
   });
 
   it('series length follows the window: daily ≤31 days, weekly beyond', () => {
@@ -55,23 +68,25 @@ describe('domain/stats', () => {
     expect(computeStats(reminders, [], 90).series).toHaveLength(Math.ceil(90 / 7));
   });
 
-  it('on-time rate and by-category are windowed too', () => {
-    const reminders = [reminder({}), reminder({ id: 'r2', categoryId: 'cat-vehicle' })];
+  it('on-time rate is computed over window completions', () => {
+    const day = addDaysISO(todayISO(), -2);
     const completions = [
-      { ...completionAt(1), reminderId: 'r1' }, // on time
-      { ...completionAt(40), reminderId: 'r2' }, // outside the 30-day window
+      { ...completionAt(2), dueDateCompleted: day }, // on time
+      { ...completionAt(3), dueDateCompleted: addDaysISO(todayISO(), -5) }, // late
     ];
-    const stats = computeStats(reminders, completions, 30);
-    expect(stats.completedTotal).toBe(1);
-    expect(stats.onTimeRate).toBe(100);
-    expect(stats.byCategory).toEqual([{ categoryId: 'cat-bills', count: 1 }]);
+    const stats = computeStats([reminder({})], completions, 30);
+    expect(stats.onTimeRate).toBe(50);
+    // Chart buckets on the completion days: today-2 and today-3 have one each.
+    expect(stats.series.at(-3)?.count).toBe(1);
+    expect(stats.series.at(-4)?.count).toBe(1);
+    expect(stats.series.at(-1)?.count).toBe(0);
+    expect(stats.series.at(-2)?.count).toBe(0);
   });
 
   it('streak ignores the window — it reaches back past it', () => {
     const completions = [completionAt(0), completionAt(1), completionAt(2)];
     // The 2-day window sees two completions but the streak still reads 3.
     const stats = computeStats([reminder({})], completions, 2);
-    expect(stats.completedTotal).toBe(2);
     expect(stats.streak).toBe(3);
   });
 
@@ -81,7 +96,8 @@ describe('domain/stats', () => {
       completionAt(2, { skipped: true }),
     ];
     const stats = computeStats([reminder({})], completions, 30);
-    expect(stats.completedTotal).toBe(0);
+    expect(stats.settledCount).toBe(0);
+    expect(stats.skippedTotal).toBe(1);
     expect(stats.onTimeRate).toBeNull();
   });
 });

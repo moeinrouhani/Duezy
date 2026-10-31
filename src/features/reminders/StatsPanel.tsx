@@ -66,7 +66,7 @@ export function StatsPanel() {
   const chartLabel =
     windowDays === 7 ? t('stats.last7Label') : windowDays === 30 ? t('stats.last30Label') : t('stats.last90Label');
 
-  if (stats.completedTotal === 0 && stats.activeCount === 0) {
+  if (stats.dueCount === 0 && reminders.length === 0) {
     return <EmptyState icon={<ChartNoAxesColumn size={26} aria-hidden />} title={t('stats.noData')} />;
   }
 
@@ -83,13 +83,14 @@ export function StatsPanel() {
         ]}
       />
 
-      {/* Every card is scoped to the selected window — the interval drives
-          the numbers, not just the chart. */}
+      {/* Every card is scoped to the selected window and counted per
+          occurrence — a due-but-unsettled reminder counts as missed in any
+          window that reaches it. */}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <StatCard index={0} lang={lang} label={t('stats.completedLabel')} value={stats.completedTotal} />
-        <StatCard index={1} lang={lang} label={t('stats.onTimeLabel')} value={stats.onTimeRate} suffix="%" />
-        <StatCard index={2} lang={lang} label={t('stats.lateLabel')} value={stats.lateTotal} danger={stats.lateTotal > 0} />
-        <StatCard index={3} lang={lang} label={t('stats.skippedLabel')} value={stats.skippedTotal} />
+        <StatCard index={0} lang={lang} label={t('stats.dueLabel')} value={stats.dueCount} />
+        <StatCard index={1} lang={lang} label={t('stats.settledLabel')} value={stats.settledCount} />
+        <StatCard index={2} lang={lang} label={t('stats.overdueLabel')} value={stats.missedCount} danger={stats.missedCount > 0} />
+        <StatCard index={3} lang={lang} label={t('stats.onTimeLabel')} value={stats.onTimeRate} suffix="%" />
       </div>
 
       <section className="mt-6">

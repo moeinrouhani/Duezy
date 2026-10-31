@@ -154,6 +154,8 @@
   },
   "stats": {
     "title": "آمار",
+    "dueLabel": "موعد",
+    "settledLabel": "پرداخت‌شده",
     "activeLabel": "فعال",
     "overdueLabel": "سررسید گذشته",
     "completedLabel": "انجام‌شده",

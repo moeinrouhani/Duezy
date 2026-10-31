@@ -1,17 +1,17 @@
-import type { CompletionRecord, ISODate, Reminder, Timestamp } from './types';
+import type { CompletionRecord, ISODate, Reminder } from './types';
 import { addDaysISO, parseISODate, toISODate, todayISO } from './date';
-import { daysUntil } from './date';
+import { occurrencesBetween } from './occurrences';
 
 export interface StatsSummary {
-  /** Current snapshot — not windowed. */
-  activeCount: number;
-  overdueCount: number;
-  /** Within the window. */
-  completedTotal: number;
-  onTimeTotal: number;
-  lateTotal: number;
+  /** Occurrences due within the window (today included). */
+  dueCount: number;
+  /** Of those, settled (a completion exists, or a done one-time reminder). */
+  settledCount: number;
+  /** Due in the window on an earlier day and still unsettled. */
+  missedCount: number;
+  /** Skipped completions within the window. */
   skippedTotal: number;
-  /** 0–100 within the window, or null when nothing completed yet. */
+  /** 0–100 of window completions made on/before their due date; null when none. */
   onTimeRate: number | null;
   /** Consecutive days ending today (or yesterday) with ≥1 real completion — not windowed. */
   streak: number;
@@ -23,27 +23,33 @@ export interface StatsSummary {
 const DAY_MS = 86_400_000;
 
 /**
- * Statistics over the LAST `days` days (default 30). Snapshot counts
- * (active/overdue) and the streak are inherently "now" values and stay
- * unwindowed; everything completion-based is filtered to the window.
+ * Statistics over the LAST `days` days (default 30), counted per OCCURRENCE:
+ * a reminder due 38 days ago that was never settled shows up under "missed"
+ * in a 90-day window and disappears from a 7-day one — the window drives the
+ * numbers. The streak is inherently a "now" value and stays unwindowed.
  */
 export function computeStats(
   reminders: Reminder[],
   completions: CompletionRecord[],
   days = 30,
 ): StatsSummary {
-  const windowStart = addDaysISO(todayISO(), -(days - 1));
-  const inWindow = (ts: Timestamp) => ts.slice(0, 10) >= windowStart;
+  const today = todayISO();
+  const windowStart = addDaysISO(today, -(days - 1));
 
-  const active = reminders.filter((r) => !r.deletedAt && !r.done);
-  const overdueCount = active.filter((r) => daysUntil(r.dueDate) < 0).length;
+  // Every occurrence that came due in the window, settled or not.
+  const occurrences = occurrencesBetween(reminders, completions, windowStart, today);
+  const dueCount = occurrences.length;
+  const settledCount = occurrences.filter((o) => o.checked).length;
+  const missedCount = occurrences.filter((o) => !o.checked && o.date < today).length;
 
-  const settled = completions.filter((c) => !c.deletedAt && inWindow(c.completedAt));
+  const settled = completions.filter(
+    (c) => !c.deletedAt && c.completedAt.slice(0, 10) >= windowStart,
+  );
   const real = settled.filter((c) => !c.skipped);
   const onTimeTotal = real.filter((c) => c.completedAt.slice(0, 10) <= c.dueDateCompleted).length;
-  const lateTotal = real.length - onTimeTotal;
 
-  // Completion counts per calendar day (real completions only).
+  // Completion counts per calendar day (real completions only) — for the
+  // chart and the streak.
   const perDay = new Map<ISODate, number>();
   for (const c of completions) {
     if (c.deletedAt || c.skipped) continue;
@@ -52,7 +58,6 @@ export function computeStats(
   }
 
   // Streak: walk back from today; allow starting at today or yesterday.
-  const today = todayISO();
   let streak = 0;
   let cursor = perDay.has(today) ? today : addDaysISO(today, -1);
   while ((perDay.get(cursor) ?? 0) > 0) {
@@ -88,11 +93,9 @@ export function computeStats(
   }
 
   return {
-    activeCount: active.length,
-    overdueCount,
-    completedTotal: real.length,
-    onTimeTotal,
-    lateTotal,
+    dueCount,
+    settledCount,
+    missedCount,
     skippedTotal: settled.length - real.length,
     onTimeRate: real.length > 0 ? Math.round((onTimeTotal / real.length) * 100) : null,
     streak,
