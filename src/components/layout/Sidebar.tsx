@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router';
-import { BellRing, House, ListChecks, Plus, SlidersHorizontal, Tags } from 'lucide-react';
+import { House, ListChecks, Plus, SlidersHorizontal, Tags } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import Favicon from '../../../public/icons/favicon.svg'
 
 const NAV = [
   { to: '/', icon: House, key: 'nav.dashboard', end: true },
