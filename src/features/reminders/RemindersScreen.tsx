@@ -312,7 +312,13 @@ function ReminderManageRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5 self-center pe-1">
+      {/* The row itself is a click target — swallow the buttons' events so
+          Edit/Delete never double-fire the row's detail navigation. */}
+      <div
+        className="flex shrink-0 items-center gap-0.5 self-center pe-1"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
         <IconButton label={t('common.edit')} onClick={onEdit}>
           <Pencil size={15} />
         </IconButton>

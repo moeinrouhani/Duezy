@@ -55,7 +55,10 @@ export function ReminderForm() {
     void (async () => {
       const repos = await getRepositories();
       const reminder = await repos.reminders.get(id!);
-      if (cancelled || !reminder) {
+      // StrictMode double-invokes effects: the discarded first run resolves
+      // after its own cleanup — bail silently, never navigate on cancel.
+      if (cancelled) return;
+      if (!reminder) {
         navigate('/');
         return;
       }
