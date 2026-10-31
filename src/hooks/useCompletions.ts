@@ -17,7 +17,9 @@ export function useCompletions(): CompletionRecord[] {
       try {
         const repos = await getRepositories();
         const rows = await repos.completions.listAll();
-        if (!cancelled) setCompletions(rows);
+        // Un-settling tombstones a completion (so the un-check syncs) — the
+        // listAll rows are raw, and dead ones must not resurface in history.
+        if (!cancelled) setCompletions(rows.filter((c) => c.deletedAt === null));
       } catch {
         if (!cancelled) setCompletions([]);
       }

@@ -11,6 +11,10 @@ export class DexieCategoryRepository implements CategoryRepository {
     return all.filter((c) => c.deletedAt === null).sort((a, b) => a.order - b.order);
   }
 
+  async listAll(): Promise<Category[]> {
+    return this.db.categories.toArray();
+  }
+
   async create(input: { name: string; icon: string; color: Category['color'] }): Promise<Category> {
     const all = await this.db.categories.toArray();
     const order = all.reduce((max, c) => Math.max(max, c.order), -1) + 1;

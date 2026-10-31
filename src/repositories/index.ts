@@ -82,6 +82,7 @@ export function getRepositories(): Promise<Repositories> {
 
       const categoriesSynced: CategoryRepository = {
         list: () => categories.list(),
+        listAll: () => categories.listAll(),
         create: async (input) => {
           const category = await categories.create(input);
           requestSync();

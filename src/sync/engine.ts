@@ -97,9 +97,12 @@ async function runSync(full: boolean): Promise<SyncOutcome> {
 
   try {
     const repos = await getRepositories();
+    // Every list here includes TOMBSTONES — a deletion is itself a change the
+    // server must learn about. (The UI-facing categories.list() hides them,
+    // which used to leave deleted categories alive on the server forever.)
     const [reminders, categories, completions] = await Promise.all([
       repos.reminders.list({ activeOnly: false }),
-      repos.categories.list(),
+      repos.categories.listAll(),
       repos.completions.listAll(),
     ]);
 
@@ -155,12 +158,16 @@ function hasSyncShape(value: unknown): value is { id: string; updatedAt: string 
   );
 }
 
-async function applyTable<T extends { id: string; updatedAt: string }>(
-  table: Table<T, string>,
+/**
+ * LWW merge of pulled records against the local table. `localRows` must be
+ * the tombstone-inclusive table contents: a deleted-locally record that's
+ * missing from the map looks "absent", and any stale remote copy would then
+ * slip past the LWW check and resurrect it.
+ */
+export function acceptRemote<T extends { id: string; updatedAt: string }>(
   localRows: T[],
   remoteRows: unknown[],
-): Promise<void> {
-  if (remoteRows.length === 0) return;
+): T[] {
   const localById = new Map(localRows.map((row) => [row.id, row]));
   const accepted: T[] = [];
   for (const remote of remoteRows) {
@@ -171,6 +178,15 @@ async function applyTable<T extends { id: string; updatedAt: string }>(
     const candidate = remote as T;
     if (shouldApplyRemote(candidate, localById.get(candidate.id))) accepted.push(candidate);
   }
+  return accepted;
+}
+
+async function applyTable<T extends { id: string; updatedAt: string }>(
+  table: Table<T, string>,
+  localRows: T[],
+  remoteRows: unknown[],
+): Promise<void> {
+  const accepted = acceptRemote(localRows, remoteRows);
   if (accepted.length > 0) await table.bulkPut(accepted);
 }
 

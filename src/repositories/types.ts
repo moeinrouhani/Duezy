@@ -56,7 +56,10 @@ export interface ReminderRepository {
 }
 
 export interface CategoryRepository {
+  /** Live categories only (UI view). */
   list(): Promise<Category[]>;
+  /** Every row including tombstones — the sync engine's view. */
+  listAll(): Promise<Category[]>;
   create(input: { name: string; icon: string; color: Category['color'] }): Promise<Category>;
   update(
     id: string,

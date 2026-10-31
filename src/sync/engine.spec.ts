@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterChangedSince, shouldApplyRemote, toEnvelope } from './engine';
+import { acceptRemote, filterChangedSince, shouldApplyRemote, toEnvelope } from './engine';
 import { parseEnvelope, parseSince } from '../../api/_lib/sync';
 
 interface Row {
@@ -44,6 +44,61 @@ describe('sync/engine merge rules', () => {
       deletedAt: null,
       data: record,
     });
+  });
+});
+
+describe('acceptRemote — pull merge against the full local table', () => {
+  interface Row {
+    id: string;
+    updatedAt: string;
+    deletedAt: string | null;
+  }
+
+  const live = (id: string, updatedAt: string): Row => ({ id, updatedAt, deletedAt: null });
+  const tombstone = (id: string, updatedAt: string): Row => ({ id, updatedAt, deletedAt: updatedAt });
+
+  it('a stale live copy must NOT resurrect a locally-deleted record', () => {
+    // Category deleted on this device at 12:00; another device still holds
+    // the pre-deletion copy (edited 08:00) and the server re-delivers it.
+    const local = [tombstone('cat-1', '2026-10-27T12:00:00.000Z')];
+    const remote = [live('cat-1', '2026-10-27T08:00:00.000Z')];
+    expect(acceptRemote(local, remote)).toEqual([]);
+  });
+
+  it('a fresher remote tombstone replaces a live local row (deletion propagates)', () => {
+    const local = [live('cat-1', '2026-10-27T08:00:00.000Z')];
+    const remote = [tombstone('cat-1', '2026-10-27T12:00:00.000Z')];
+    expect(acceptRemote(local, remote)).toEqual([tombstone('cat-1', '2026-10-27T12:00:00.000Z')]);
+  });
+
+  it('a genuinely fresher remote edit still wins over a stale local copy', () => {
+    const local = [live('cat-1', '2026-10-27T08:00:00.000Z')];
+    const remote = [live('cat-1', '2026-10-27T12:00:00.000Z')];
+    expect(acceptRemote(local, remote)).toEqual([live('cat-1', '2026-10-27T12:00:00.000Z')]);
+  });
+
+  it('tombstones absent from the local list are still matched by id — the resurrection bug', () => {
+    // The old bug: the local map was built from the UI's live-only list, so
+    // the deleted category wasn't in it and ANY remote copy was accepted.
+    const local: Row[] = []; // UI list() hides the tombstone
+    const remote = [live('cat-1', '2026-10-27T08:00:00.000Z')];
+    // With the tombstone missing entirely, acceptance is unavoidable — which
+    // is exactly why the sync gather must pass the FULL table (listAll).
+    expect(acceptRemote(local, remote)).toHaveLength(1);
+  });
+
+  it('malformed remote records are skipped, valid ones still applied', () => {
+    const local = [live('a', '2026-10-27T08:00:00.000Z')];
+    const remote = [
+      { id: 'bad' }, // no updatedAt
+      null,
+      live('a', '2026-10-27T12:00:00.000Z'),
+      { id: 'b', updatedAt: '2026-10-27T09:00:00.000Z' }, // new record → accepted
+    ];
+    expect(acceptRemote(local, remote)).toEqual([
+      live('a', '2026-10-27T12:00:00.000Z'),
+      { id: 'b', updatedAt: '2026-10-27T09:00:00.000Z' }, // passes through as-is
+    ]);
   });
 });
 
