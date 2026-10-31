@@ -1,22 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Car,
-  FileText,
-  Gift,
-  GraduationCap,
-  Heart,
-  House,
-  Pencil,
-  Plane,
-  Plus,
-  Receipt,
-  Tag,
-  Trash2,
-  User,
-  Wallet,
-  Wrench,
-} from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { CategoryGlyph, CategoryTile } from '../../components/ui/CategoryIcon';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button, IconButton } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -71,7 +57,10 @@ export function CategoriesScreen() {
   };
 
   const remove = async (id: string) => {
-    const ok = await confirm('categories.deleteConfirmTitle', 'categories.deleteConfirmMessage');
+    const ok = await confirm('categories.deleteConfirmTitle', 'categories.deleteConfirmMessage', {
+      danger: true,
+      confirmLabel: t('common.delete'),
+    });
     if (!ok) return;
     const repos = await getRepositories();
     await repos.categories.softDelete(id, BUILT_IN_CATEGORY_IDS.other);
@@ -91,16 +80,15 @@ export function CategoriesScreen() {
       />
 
       <ul className="flex flex-col gap-2">
-        {categories.map((category) => {
+        {categories.map((category, index) => {
           const color = CATEGORY_COLOR_HEX[category.color];
           return (
             <li
               key={category.id}
-              className="flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3"
+              style={{ '--i': index } as CSSProperties}
+              className="anim-rise flex items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 shadow-card transition-[box-shadow,transform] duration-200 hover:-translate-y-px hover:shadow-lift"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl text-white" style={{ backgroundColor: color }}>
-                <CategoryGlyph name={category.icon} />
-              </span>
+              <CategoryTile icon={category.icon} color={color} />
               <div className="flex-1">
                 <p className="text-sm font-medium">{category.nameKey ? t(category.nameKey) : category.name}</p>
                 {category.isBuiltIn && <p className="text-[0.7rem] text-fg-2">{t('categories.builtInHint')}</p>}
@@ -151,7 +139,7 @@ export function CategoriesScreen() {
                   aria-pressed={icon === iconName}
                   onClick={() => setIcon(iconName)}
                   className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-xl border transition',
+                    'flex h-10 w-10 items-center justify-center rounded-xl border transition-[background-color,border-color,color,transform] duration-200 active:scale-90',
                     icon === iconName ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300' : 'border-line text-fg-2 hover:text-fg-1',
                   )}
                 >
@@ -172,7 +160,7 @@ export function CategoriesScreen() {
                   aria-pressed={color === accent.id}
                   onClick={() => setColor(accent.id)}
                   className={cn(
-                    'h-8 w-8 rounded-full border-2 transition',
+                    'h-8 w-8 rounded-full border-2 transition-transform duration-200 ease-[var(--ease-spring)] hover:scale-105',
                     color === accent.id ? 'border-fg-1 scale-110' : 'border-transparent',
                   )}
                   style={{ backgroundColor: accent.swatch }}
@@ -195,22 +183,4 @@ export function CategoriesScreen() {
   );
 }
 
-const GLYPHS: Record<string, typeof Receipt> = {
-  receipt: Receipt,
-  car: Car,
-  user: User,
-  tag: Tag,
-  wallet: Wallet,
-  home: House,
-  'graduation-cap': GraduationCap,
-  heart: Heart,
-  gift: Gift,
-  plane: Plane,
-  'file-text': FileText,
-  wrench: Wrench,
-};
-
-export function CategoryGlyph({ name }: { name: string }) {
-  const Icon = GLYPHS[name] ?? Tag;
-  return <Icon size={17} aria-hidden />;
-}
+export { CategoryGlyph };

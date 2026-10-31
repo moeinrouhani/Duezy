@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Bell, ListChecks, Pencil, Plus, Repeat, Search, Trash2 } from 'lucide-react';
+import { Bell, CircleCheck, ListChecks, Pencil, Pin, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button, Chip, EmptyState, SegmentedControl } from '../../components/ui';
 import { Input } from '../../components/ui/Input';
 import { IconButton } from '../../components/ui/Button';
+import { CategoryTile } from '../../components/ui/CategoryIcon';
 import { useConfirm } from '../../components/ui/Snackbar';
 import { StatsPanel } from './StatsPanel';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useCompletions } from '../../hooks/useCompletions';
 import { useLocalDate } from '../../hooks/useLocalDate';
 import { reminderProgress } from '../../domain/occurrences';
+import { daysUntil } from '../../domain/date';
 import { sortReminders } from '../../utils/sortReminders';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { formatNumber } from '../../utils/digits';
@@ -38,6 +41,8 @@ export function RemindersScreen() {
   const [tab, setTab] = useState<Tab>('list');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  // Rows that were just confirmed for deletion — they collapse before the data goes.
+  const [leaving, setLeaving] = useState<Set<string>>(() => new Set());
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,8 +74,21 @@ export function RemindersScreen() {
   );
 
   async function handleDelete(reminder: Reminder) {
-    const ok = await confirm('detail.deleteTitle', 'detail.deleteMessage');
-    if (ok) void remove(reminder.id);
+    const ok = await confirm('detail.deleteTitle', 'detail.deleteMessage', {
+      danger: true,
+      confirmLabel: t('common.delete'),
+    });
+    if (!ok) return;
+    setLeaving((current) => new Set(current).add(reminder.id));
+    window.setTimeout(() => {
+      void remove(reminder.id).finally(() =>
+        setLeaving((current) => {
+          const next = new Set(current);
+          next.delete(reminder.id);
+          return next;
+        }),
+      );
+    }, 260);
   }
 
   return (
@@ -96,18 +114,30 @@ export function RemindersScreen() {
       />
 
       {tab === 'stats' ? (
-        <StatsPanel />
+        <div className="anim-fade-in">
+          <StatsPanel />
+        </div>
       ) : (
         <>
           <div className="relative">
-            <Search size={16} className="pointer-events-none absolute inset-y-0 start-3 my-auto text-fg-2" aria-hidden />
+            <Search size={16} className="pointer-events-none absolute inset-y-0 start-3.5 my-auto text-fg-2" aria-hidden />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('search.placeholder')}
               aria-label={t('search.title')}
-              className="ps-9"
+              className="ps-10 pe-10"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                aria-label={t('search.clear')}
+                className="anim-pop absolute inset-y-0 end-2 my-auto flex h-7 w-7 items-center justify-center rounded-lg text-fg-2 transition-colors hover:bg-surface-2 hover:text-fg-1"
+              >
+                <X size={14} aria-hidden />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
@@ -143,15 +173,18 @@ export function RemindersScreen() {
             )
           ) : (
             <div className="flex flex-col gap-2">
-              {results.map((reminder) => {
+              {results.map((reminder, index) => {
                 const category = categories.find((c) => c.id === reminder.categoryId);
                 return (
                   <ReminderManageRow
                     key={reminder.id}
+                    index={index}
+                    leaving={leaving.has(reminder.id)}
                     reminder={reminder}
                     completedCount={completions.filter((c) => c.reminderId === reminder.id && !c.deletedAt).length}
                     lang={lang}
                     categoryName={category ? (category.nameKey ? t(category.nameKey) : category.name) : undefined}
+                    categoryIcon={category?.icon}
                     color={CATEGORY_COLOR_HEX[category?.color ?? 'teal']}
                     onEdit={() => navigate(`/reminder/${reminder.id}/edit`)}
                     onDelete={() => void handleDelete(reminder)}
@@ -169,16 +202,22 @@ export function RemindersScreen() {
 /** Full-data row: progress + edit/delete. Deliberately no check control. */
 function ReminderManageRow({
   reminder,
+  index,
+  leaving,
   completedCount,
   categoryName,
+  categoryIcon,
   color,
   lang,
   onEdit,
   onDelete,
 }: {
   reminder: Reminder;
+  index: number;
+  leaving: boolean;
   completedCount: number;
   categoryName: string | undefined;
+  categoryIcon: string | undefined;
   color: string;
   lang: 'en' | 'fa';
   onEdit: () => void;
@@ -188,6 +227,7 @@ function ReminderManageRow({
   const navigate = useNavigate();
   const localDate = useLocalDate();
   const progress = reminderProgress(reminder, completedCount);
+  const overdue = !reminder.done && daysUntil(reminder.dueDate) < 0;
 
   return (
     <div
@@ -197,22 +237,33 @@ function ReminderManageRow({
       onKeyDown={(event) => {
         if (event.key === 'Enter') navigate(`/reminder/${reminder.id}`);
       }}
+      style={{ '--i': index } as CSSProperties}
       className={cn(
-        'relative flex cursor-pointer items-start gap-3 overflow-hidden rounded-2xl border border-line bg-surface p-3.5 pe-2 transition-colors',
-        reminder.done && 'opacity-60',
+        'anim-rise group relative flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-surface p-3 pe-2 shadow-card',
+        'transition-[border-color,box-shadow,transform,opacity,filter] duration-200 hover:-translate-y-px hover:border-accent-300/70 hover:shadow-lift active:translate-y-0 dark:hover:border-accent-700/60',
+        reminder.done && 'opacity-70',
+        // Leaving rows shrink and fade out before the record is removed.
+        leaving && 'pointer-events-none scale-95 opacity-0 blur-[1px]',
       )}
     >
-      <span className="absolute inset-y-0 start-0 w-1" style={{ backgroundColor: color }} aria-hidden />
+      <CategoryTile icon={categoryIcon} color={color} className={reminder.done ? 'opacity-60' : undefined} />
+
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <p className={cn('truncate text-sm font-medium', reminder.done && 'line-through')}>{reminder.title}</p>
+          <p className={cn('truncate text-sm font-medium', reminder.done && 'text-fg-2 line-through')}>{reminder.title}</p>
+          {reminder.pinned && (
+            <Pin size={12} className="shrink-0 -rotate-45 text-accent-600 dark:text-accent-400" aria-label={t('card.pinned')} />
+          )}
+          {reminder.done && <CircleCheck size={14} className="shrink-0 text-success" aria-hidden />}
         </div>
 
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-fg-2">
-          <span>{localDate.formatDate(reminder.dueDate)} · {localDate.relative(reminder.dueDate)}</span>
+          <span className={cn(overdue && 'font-medium text-danger')}>
+            {localDate.formatDate(reminder.dueDate)} · {localDate.relative(reminder.dueDate)}
+          </span>
           {categoryName && <span>· {categoryName}</span>}
           {reminder.amount !== undefined && (
-            <span>
+            <span className="font-medium text-fg-1/80">
               · {formatNumber(reminder.amount, lang)}
               {reminder.currency ? ` ${reminder.currency}` : ''}
             </span>
@@ -232,7 +283,7 @@ function ReminderManageRow({
         </div>
 
         {/* Progress */}
-        <div className="mt-2">
+        <div className="mt-2.5">
           {progress !== null ? (
             <div className="flex items-center gap-2">
               <span
@@ -243,8 +294,8 @@ function ReminderManageRow({
                 aria-valuemax={100}
               >
                 <span
-                  className="block h-full rounded-full bg-accent-500 dark:bg-accent-400 transition-all"
-                  style={{ width: `${Math.round(progress * 100)}%` }}
+                  className="anim-grow-x block h-full rounded-full bg-linear-to-r from-accent-400 to-accent-600"
+                  style={{ width: `${Math.round(progress * 100)}%`, '--i': index } as CSSProperties}
                 />
               </span>
               <span className="shrink-0 text-[0.7rem] tabular-nums text-fg-2">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ISODate, Weekday } from '../../domain/types';
 import { parseISODate, toISODate, todayISO } from '../../domain/date';
@@ -88,6 +88,15 @@ export function DualCalendarPanel({ calendar, weekStart, value, onChange, marks,
   const weekdays = t('weekdays.short', { returnObjects: true }) as string[];
   const todayMonth = monthOf(today, calendar);
 
+  // Remember which way the user moved so the grid can slide in from that side.
+  const ordinal = view.y * 12 + view.m;
+  const lastOrdinal = useRef(ordinal);
+  const direction = useRef<'next' | 'prev' | null>(null);
+  if (lastOrdinal.current !== ordinal) {
+    direction.current = ordinal > lastOrdinal.current ? 'next' : 'prev';
+    lastOrdinal.current = ordinal;
+  }
+
   return (
     <div>
       <YearMonthNav
@@ -100,18 +109,35 @@ export function DualCalendarPanel({ calendar, weekStart, value, onChange, marks,
             : undefined
         }
       />
-      <div className="mt-3 grid grid-cols-7 gap-y-1 text-center">
+      <div className="mt-3 grid grid-cols-7 text-center">
         {headerWeekdays.map((wd) => (
-          <div key={wd} className="py-1 text-[0.65rem] font-medium text-fg-2">
+          <div
+            key={wd}
+            className={cn(
+              'py-1 text-[0.65rem] font-medium',
+              // Friday is the weekend day in the Persian calendar.
+              calendar === 'jalali' && wd === 5 ? 'text-danger/70' : 'text-fg-2',
+            )}
+          >
             {weekdays[wd]}
           </div>
         ))}
+      </div>
+      <div
+        key={ordinal}
+        className={cn(
+          'mt-1 grid grid-cols-7 gap-y-1 text-center',
+          direction.current === 'next' && 'anim-slide-next',
+          direction.current === 'prev' && 'anim-slide-prev',
+        )}
+      >
         {cells.map((iso, index) => {
           if (!iso) return <span key={`blank-${index}`} />;
           const date = parseISODate(iso);
           const dayNumber = calendar === 'jalali' ? toJalali(iso).jd : date.getDate();
           const isToday = iso === today;
           const isSelected = iso === value;
+          const isWeekend = calendar === 'jalali' && date.getDay() === 5;
           const mark = marks?.[iso];
           return (
             <button
@@ -121,12 +147,13 @@ export function DualCalendarPanel({ calendar, weekStart, value, onChange, marks,
               aria-pressed={isSelected}
               aria-label={localDate.formatDate(iso)}
               className={cn(
-                'mx-auto flex h-9 w-9 flex-col items-center justify-center rounded-xl text-sm transition-colors',
+                'mx-auto flex h-10 w-10 flex-col items-center justify-center rounded-xl text-sm',
+                'transition-[background-color,color,transform,box-shadow] duration-150 active:scale-90',
                 isSelected
-                  ? 'bg-accent-600 font-semibold text-white dark:bg-accent-500'
+                  ? 'anim-pop bg-accent-600 font-semibold text-white shadow-md shadow-accent-600/30 dark:bg-accent-500'
                   : isToday
-                    ? 'font-semibold text-accent-600 dark:text-accent-400 ring-1 ring-accent-400/60'
-                    : 'text-fg-1 hover:bg-surface-2',
+                    ? 'bg-accent-50 font-semibold text-accent-700 ring-1 ring-accent-400/60 hover:bg-accent-100 dark:bg-accent-950 dark:text-accent-300 dark:hover:bg-accent-900'
+                    : cn('hover:bg-surface-2', isWeekend ? 'text-danger/80' : 'text-fg-1'),
               )}
             >
               {localDate.dayNumber(dayNumber)}

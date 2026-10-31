@@ -19,14 +19,16 @@ export function Toggle({ checked, onChange, label, disabled }: ToggleProps) {
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          'relative h-6 w-10 shrink-0 rounded-full transition-colors',
-          checked ? 'bg-accent-600 dark:bg-accent-500' : 'bg-line',
+          'group relative h-6 w-10 shrink-0 rounded-full transition-colors duration-200',
+          checked ? 'bg-accent-600 dark:bg-accent-500' : 'bg-fg-2/30 dark:bg-line',
         )}
       >
         <span
           className={cn(
-            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-[inset-inline-start]',
-            checked ? 'start-[1.25rem]' : 'start-0.5',
+            'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md',
+            'transition-[inset-inline-start,width] duration-300 ease-[var(--ease-spring)]',
+            'group-active:w-6',
+            checked ? 'start-[1.25rem] group-active:start-[1rem]' : 'start-0.5',
           )}
         />
       </button>

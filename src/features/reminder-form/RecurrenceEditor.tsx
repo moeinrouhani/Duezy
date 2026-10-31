@@ -82,7 +82,7 @@ export function RecurrenceEditor({
   const patch = (partial: Partial<RecurrenceDraft>) => onChange({ ...draft, ...partial });
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
+    <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-card">
       <SegmentedControl
         label={t('recurrence.label')}
         value={draft.freq}
@@ -91,7 +91,7 @@ export function RecurrenceEditor({
       />
 
       {draft.freq !== 'none' && (
-        <>
+        <div className="anim-fade-in flex flex-col gap-4">
           <div className="flex items-end gap-3">
             <div className="w-24">
               <Input
@@ -183,7 +183,7 @@ export function RecurrenceEditor({
               {t('detail.dueLabel')}: {localDate.formatDate(dueDate)} → {localDate.formatDate(draft.endDate)}
             </p>
           )}
-        </>
+        </div>
       )}
     </div>
   );

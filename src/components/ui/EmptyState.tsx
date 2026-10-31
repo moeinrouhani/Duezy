@@ -11,11 +11,11 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, body, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center gap-3 px-6 py-14 text-center', className)}>
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-2 text-fg-2">
+    <div className={cn('anim-page flex flex-col items-center gap-3 px-6 py-14 text-center', className)}>
+      <div className="anim-float flex h-16 w-16 items-center justify-center rounded-3xl bg-accent-50 text-accent-600 ring-8 ring-accent-50/60 dark:bg-accent-950 dark:text-accent-300 dark:ring-accent-950/60">
         {icon}
       </div>
-      <h3 className="text-base font-semibold text-fg-1">{title}</h3>
+      <h3 className="mt-2 text-base font-semibold text-fg-1">{title}</h3>
       {body && <p className="max-w-xs text-sm leading-6 text-fg-2">{body}</p>}
       {action}
     </div>
@@ -40,9 +40,11 @@ export function Chip({ children, active, onClick, className }: ChipProps) {
       onClick={onClick}
       aria-pressed={interactive ? active : undefined}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
+        'transition-[background-color,color,transform,box-shadow] duration-200 ease-out',
+        interactive && 'active:scale-95',
         active
-          ? 'bg-accent-600 text-white dark:bg-accent-500'
+          ? 'bg-accent-600 text-white shadow-sm shadow-accent-600/25 dark:bg-accent-500'
           : 'bg-surface-2 text-fg-2 hover:text-fg-1',
         interactive && !active && 'hover:bg-line',
         className,

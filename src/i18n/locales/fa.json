@@ -47,7 +47,8 @@
     "emptyMonth": "این ماه موعدی ندارید",
     "dueLabel": "موعد",
     "paidLabel": "پرداخت‌شده",
-    "unpaidLabel": "پرداخت‌نشده"
+    "unpaidLabel": "پرداخت‌نشده",
+    "allPaid": "همه موارد این ماه پرداخت شده"
   },
   "reminders": {
     "tabList": "یادآورها",
@@ -135,14 +136,17 @@
     "deleteMessage": "از همه فهرست‌ها حذف می‌شود؛ بلافاصله بعدش می‌توانید بازگردانید."
   },
   "calendar": {
-    "todayButton": "امروز"
+    "todayButton": "امروز",
+    "prevMonth": "ماه قبل",
+    "nextMonth": "ماه بعد"
   },
   "search": {
     "title": "جستجو",
     "placeholder": "جستجو در یادآورها…",
     "results_other": "{{count}} نتیجه",
     "empty": "چیزی پیدا نشد",
-    "emptyHint": "عنوان، یادداشت، دسته‌بندی یا مبلغ را امتحان کنید."
+    "emptyHint": "عنوان، یادداشت، دسته‌بندی یا مبلغ را امتحان کنید.",
+    "clear": "پاک کردن جستجو"
   },
   "stats": {
     "title": "آمار",
@@ -200,6 +204,8 @@
     "usernameHint": "۳ تا ۳۲ نویسه: حرف انگلیسی، رقم، نقطه، زیرخط یا خط تیره",
     "passwordLabel": "گذرواژه",
     "passwordHint": "حداقل ۸ نویسه",
+    "showPassword": "نمایش گذرواژه",
+    "hidePassword": "پنهان کردن گذرواژه",
     "displayNameLabel": "نام نمایشی (اختیاری)",
     "loginAction": "ورود",
     "registerAction": "ساخت حساب",

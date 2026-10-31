@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { Info } from 'lucide-react';
+import { Check, Info } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
@@ -20,9 +21,9 @@ import { syncNow } from '../../sync/engine';
 import { cn } from '../../utils/cn';
 import type { AccentColor, AlertOffset, CalendarSystem, Lang, ThemeMode, Weekday } from '../../domain/types';
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, index = 0, children }: { title: string; index?: number; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-surface p-4">
+    <section className="anim-rise rounded-2xl border border-line bg-surface p-4 shadow-card" style={{ '--i': index } as CSSProperties}>
       <h2 className="mb-3 text-xs font-semibold text-fg-2">{title}</h2>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
@@ -127,7 +128,7 @@ export function SettingsScreen() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t('settings.title')} />
 
-      <Section title={t('settings.accountTitle')}>
+      <Section index={0} title={t('settings.accountTitle')}>
         {user ? (
           <>
             <Row label={t('auth.signedInAs')} hint={syncLine()}>
@@ -161,7 +162,7 @@ export function SettingsScreen() {
         )}
       </Section>
 
-      <Section title={t('settings.languageLabel')}>
+      <Section index={1} title={t('settings.languageLabel')}>
         <SegmentedControl<Lang>
           label={t('settings.languageLabel')}
           value={settings.lang}
@@ -182,7 +183,7 @@ export function SettingsScreen() {
         />
       </Section>
 
-      <Section title={t('settings.appearanceLabel')}>
+      <Section index={2} title={t('settings.appearanceLabel')}>
         <Row label={t('settings.themeLabel')}>
           <SegmentedControl<ThemeMode>
             value={settings.themeMode}
@@ -207,11 +208,13 @@ export function SettingsScreen() {
                 title={t('accent.' + accent.id)}
                 onClick={() => update({ accent: accent.id as AccentColor })}
                 className={cn(
-                  'flex h-10 w-10 items-center justify-center rounded-full border-2 transition',
-                  settings.accent === accent.id ? 'border-fg-1 scale-110' : 'border-transparent hover:scale-105',
+                  'flex h-10 w-10 items-center justify-center rounded-full border-2 transition-transform duration-300 ease-[var(--ease-spring)]',
+                  settings.accent === accent.id ? 'border-fg-1 scale-110 shadow-md' : 'border-transparent hover:scale-105',
                 )}
                 style={{ backgroundColor: accent.swatch }}
-              />
+              >
+                {settings.accent === accent.id && <Check size={16} className="anim-pop text-white" aria-hidden />}
+              </button>
             ))}
           </div>
         </div>
@@ -229,7 +232,7 @@ export function SettingsScreen() {
         </Row>
       </Section>
 
-      <Section title={t('settings.notificationsTitle')}>
+      <Section index={3} title={t('settings.notificationsTitle')}>
         <Toggle
           label={t('settings.enableLabel')}
           checked={settings.notificationsEnabled && permission === 'granted'}
@@ -253,7 +256,7 @@ export function SettingsScreen() {
         </div>
       </Section>
 
-      <Section title={t('settings.backupTitle')}>
+      <Section index={4} title={t('settings.backupTitle')}>
         <p className="text-xs leading-5 text-fg-2">{t('settings.importHint')}</p>
         <div className="flex gap-3">
           <Button variant="secondary" className="flex-1" onClick={() => void onExport()}>
@@ -276,7 +279,7 @@ export function SettingsScreen() {
         </div>
       </Section>
 
-      <Section title={t('settings.aboutTitle')}>
+      <Section index={5} title={t('settings.aboutTitle')}>
         <div className="flex items-start gap-3">
           <Info size={18} className="mt-0.5 shrink-0 text-fg-2" aria-hidden />
           <p className="text-sm leading-6 text-fg-2">{t('settings.aboutBody')}</p>

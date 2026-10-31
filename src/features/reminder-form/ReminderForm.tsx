@@ -6,6 +6,8 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { Input, Textarea } from '../../components/ui/Input';
 import { Toggle } from '../../components/ui/Toggle';
+import { Collapse } from '../../components/ui/Collapse';
+import { ChevronDown } from 'lucide-react';
 import { DatePicker } from '../../components/date-picker/DatePicker';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -154,7 +156,7 @@ export function ReminderForm() {
                   onClick={() => setCategoryId(category.id)}
                   aria-pressed={active}
                   className={cn(
-                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-[background-color,color,transform] duration-200 active:scale-95',
                     active ? 'border-transparent text-white' : 'border-line bg-surface text-fg-2 hover:text-fg-1',
                   )}
                   style={active ? { backgroundColor: color } : undefined}
@@ -176,17 +178,19 @@ export function ReminderForm() {
           <AlertPicker offsets={alerts} onChange={setAlerts} />
         </div>
 
-        <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4">
+        <div className="rounded-2xl border border-line bg-surface p-4 shadow-card">
           <button
             type="button"
-            className="text-start text-sm font-medium text-accent-600 dark:text-accent-400"
+            aria-expanded={advanced}
+            className="flex w-full items-center justify-between text-start text-sm font-medium text-accent-600 dark:text-accent-400"
             onClick={() => setAdvanced((value) => !value)}
           >
             {advanced ? t('form.lessOptions') : t('form.moreOptions')}
+            <ChevronDown size={16} aria-hidden className={cn('transition-transform duration-300 ease-[var(--ease-out)]', advanced && 'rotate-180')} />
           </button>
 
-          {advanced && (
-            <div className="flex flex-col gap-4">
+          <Collapse open={advanced}>
+            <div className="flex flex-col gap-4 pt-4">
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   label={t('form.amountLabel')}
@@ -211,11 +215,11 @@ export function ReminderForm() {
               <Toggle label={t('form.pinnedLabel')} checked={pinned} onChange={setPinned} />
               <RecurrenceEditor draft={recurrence} onChange={setRecurrence} dueDate={dueDate} />
             </div>
-          )}
+          </Collapse>
         </div>
 
         {/* Clears the bottom nav plus the phone's gesture-bar inset. */}
-        <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex gap-3 bg-bg/80 py-2 backdrop-blur md:bottom-2">
+        <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex gap-3 rounded-2xl bg-bg/80 py-2 backdrop-blur-md md:bottom-2">
           <Button type="button" variant="secondary" className="flex-1" onClick={() => navigate(-1)}>
             {t('common.cancel')}
           </Button>

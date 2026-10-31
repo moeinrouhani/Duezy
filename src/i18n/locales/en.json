@@ -50,7 +50,8 @@
     "emptyMonth": "Nothing due this month",
     "dueLabel": "Due",
     "paidLabel": "Paid",
-    "unpaidLabel": "Unpaid"
+    "unpaidLabel": "Unpaid",
+    "allPaid": "Everything is paid this month"
   },
   "reminders": {
     "tabList": "Reminders",
@@ -140,7 +141,9 @@
     "deleteMessage": "It disappears from all lists. You can undo right after."
   },
   "calendar": {
-    "todayButton": "Today"
+    "todayButton": "Today",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month"
   },
   "search": {
     "title": "Search",
@@ -148,7 +151,8 @@
     "results_one": "{{count}} result",
     "results_other": "{{count}} results",
     "empty": "Nothing found",
-    "emptyHint": "Try a title, note, category or amount."
+    "emptyHint": "Try a title, note, category or amount.",
+    "clear": "Clear search"
   },
   "stats": {
     "title": "Stats",
@@ -206,6 +210,8 @@
     "usernameHint": "3–32 characters: letters, digits, dot, underscore or hyphen",
     "passwordLabel": "Password",
     "passwordHint": "At least 8 characters",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "displayNameLabel": "Display name (optional)",
     "loginAction": "Sign in",
     "registerAction": "Create account",

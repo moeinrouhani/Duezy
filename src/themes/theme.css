@@ -35,6 +35,11 @@
   --color-warning: var(--c-warning);
 
   --font-sans: var(--app-font);
+
+  /* Elevation tokens live in motion.css (they flip for dark mode). */
+  --shadow-card: var(--sh-card);
+  --shadow-lift: var(--sh-lift);
+  --shadow-pop: var(--sh-pop);
 }
 
 /* ---- Accent ramps ------------------------------------------------------ */

@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import {
   Bell,
-  CalendarDays,
+  BellRing,
+  CalendarClock,
   Check,
   CircleAlert,
+  CircleCheck,
   FileText,
   Pencil,
   Pin,
@@ -19,6 +21,7 @@ import {
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { CategoryTile } from '../../components/ui/CategoryIcon';
 import { useConfirm } from '../../components/ui/Snackbar';
 import { getRepositories } from '../../repositories';
 import { useReminders, useCategories } from '../../hooks/useReminders';
@@ -26,9 +29,12 @@ import { useLocalDate } from '../../hooks/useLocalDate';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { formatNumber } from '../../utils/digits';
 import { upcomingOccurrences } from '../../domain/recurrence';
+import { sectionOf } from '../../domain/alerts';
+import type { ReminderSection } from '../../domain/alerts';
 import type { CompletionRecord, RecurrenceRule, Reminder } from '../../domain/types';
 import type { TFunction } from 'i18next';
 import { cn } from '../../utils/cn';
+import type { CSSProperties } from 'react';
 
 export function recurrenceDescription(rule: RecurrenceRule, t: TFunction): string {
   return rule.interval > 1
@@ -85,22 +91,28 @@ export function ReminderDetailScreen() {
     reminder.recurrence && !reminder.done ? upcomingOccurrences(reminder.recurrence, reminder.dueDate, 3) : [];
 
   const onDelete = async () => {
-    const ok = await confirm('detail.deleteTitle', 'detail.deleteMessage');
+    const ok = await confirm('detail.deleteTitle', 'detail.deleteMessage', {
+      danger: true,
+      confirmLabel: t('common.delete'),
+    });
     if (ok) {
       await remove(reminder.id);
       navigate('/');
     }
   };
 
-  const rows: { label: string; value?: string; icon: ReactElement }[] = [
-    {
-      label: t('detail.dueLabel'),
-      value: localDate.formatDateLong(reminder.dueDate) + ' · ' + localDate.relative(reminder.dueDate),
-      icon: <CalendarDays size={16} aria-hidden />,
+  const section = sectionOf(reminder);
+  const status: Record<ReminderSection, { icon: ReactElement; tone: string }> = {
+    overdue: { icon: <CircleAlert size={14} aria-hidden />, tone: 'bg-danger/10 text-danger' },
+    today: { icon: <BellRing size={14} aria-hidden />, tone: 'bg-warning/15 text-warning' },
+    upcoming: {
+      icon: <CalendarClock size={14} aria-hidden />,
+      tone: 'bg-accent-50 text-accent-700 dark:bg-accent-950 dark:text-accent-300',
     },
-    ...(category
-      ? [{ label: t('form.categoryLabel'), value: category.nameKey ? t(category.nameKey) : category.name, icon: <span className="inline-block h-3.5 w-3.5 rounded-full" style={{ backgroundColor: color }} aria-hidden /> }]
-      : []),
+    done: { icon: <CircleCheck size={14} aria-hidden />, tone: 'bg-success/10 text-success' },
+  };
+
+  const rows: { label: string; value?: string; icon: ReactElement }[] = [
     ...(reminder.amount !== undefined
       ? [{
           label: t('detail.amountLabel'),
@@ -149,8 +161,36 @@ export function ReminderDetailScreen() {
         }
       />
 
+      {/* Hero: when it's due, at a glance, in the category's color. */}
+      <section className="anim-rise relative overflow-hidden rounded-3xl border border-line bg-surface p-5 shadow-card">
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-1"
+          style={{ backgroundColor: color }}
+        />
+        <div className="flex items-start gap-3">
+          <CategoryTile icon={category?.icon} color={color} className="h-12 w-12 rounded-2xl" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-fg-2">{t('detail.dueLabel')}</p>
+            <p className="mt-0.5 text-lg leading-snug font-bold tracking-tight">{localDate.formatDateLong(reminder.dueDate)}</p>
+            {category && (
+              <p className="mt-0.5 text-xs text-fg-2">{category.nameKey ? t(category.nameKey) : category.name}</p>
+            )}
+          </div>
+        </div>
+        <span
+          className={cn(
+            'mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold',
+            status[section].tone,
+          )}
+        >
+          {status[section].icon}
+          {section === 'done' ? t('common.done') : localDate.relative(reminder.dueDate)}
+        </span>
+      </section>
+
       {!reminder.done && (
-        <div className="flex gap-2">
+        <div className="anim-rise flex gap-2" style={{ '--i': 1 } as CSSProperties}>
           <Button className="flex-1" onClick={() => void complete(reminder.id)}>
             <Check size={17} aria-hidden />
             {t('detail.markDone')}
@@ -164,14 +204,19 @@ export function ReminderDetailScreen() {
         </div>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-line bg-surface">
+      <section
+        className="anim-rise overflow-hidden rounded-2xl border border-line bg-surface shadow-card"
+        style={{ '--i': 2 } as CSSProperties}
+      >
         <dl>
           {rows.map((row, index) => (
             <div
               key={row.label}
               className={cn('flex items-start gap-3 px-4 py-3', index > 0 && 'border-t border-line')}
             >
-              <span className="mt-0.5 text-fg-2">{row.icon}</span>
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-fg-2">
+                {row.icon}
+              </span>
               <div className="min-w-0 flex-1">
                 <dt className="text-xs text-fg-2">{row.label}</dt>
                 <dd className="mt-0.5 text-sm break-words whitespace-pre-wrap">{row.value}</dd>
@@ -182,11 +227,17 @@ export function ReminderDetailScreen() {
       </section>
 
       {preview.length > 0 && (
-        <section>
+        <section className="anim-rise" style={{ '--i': 3 } as CSSProperties}>
           <h2 className="mb-2 px-1 text-xs font-semibold text-fg-2">{t('recurrence.nextOccurrences')}</h2>
-          <ul className="flex flex-col gap-1.5 rounded-2xl border border-line bg-surface p-3">
-            {preview.map((iso) => (
-              <li key={iso} className="text-sm text-fg-1">
+          <ul className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4 shadow-card">
+            {preview.map((iso, i) => (
+              <li key={iso} className="flex items-center gap-3 text-sm text-fg-1">
+                {/* Timeline dot: fades with distance from now. */}
+                <span
+                  aria-hidden
+                  className="h-2 w-2 shrink-0 rounded-full bg-accent-500 dark:bg-accent-400"
+                  style={{ opacity: 1 - i * 0.28 }}
+                />
                 {localDate.formatDate(iso)}
               </li>
             ))}
@@ -194,7 +245,7 @@ export function ReminderDetailScreen() {
         </section>
       )}
 
-      <section>
+      <section className="anim-rise" style={{ '--i': 4 } as CSSProperties}>
         <h2 className="mb-2 px-1 text-xs font-semibold text-fg-2">{t('detail.historyLabel')}</h2>
         {history.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-line px-4 py-6 text-center text-sm text-fg-2">
@@ -205,12 +256,17 @@ export function ReminderDetailScreen() {
             {history.map((record) => (
               <li
                 key={record.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm shadow-card"
               >
-                <span className="text-fg-1">
+                <span className="flex items-center gap-2 text-fg-1">
+                  <CircleCheck
+                    size={14}
+                    className={record.skipped ? 'text-fg-2' : 'text-success'}
+                    aria-hidden
+                  />
                   {localDate.formatDate(record.dueDateCompleted)}
                   {record.skipped && (
-                    <span className="ms-2 rounded-full bg-surface-2 px-2 py-0.5 text-[0.65rem] text-fg-2">
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.65rem] text-fg-2">
                       {t('detail.skippedTag')}
                     </span>
                   )}

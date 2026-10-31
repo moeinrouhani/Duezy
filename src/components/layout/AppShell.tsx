@@ -36,7 +36,11 @@ export function AppShell() {
       {/* Standalone PWA on notched phones draws under the status bar
           (viewport-fit=cover) — pad the content clear of it. */}
       <main className="min-w-0 flex-1 pt-[env(safe-area-inset-top)]">
-        <div key={location.pathname} className="mx-auto w-full max-w-xl px-4 pt-4 pb-28 sm:max-w-2xl md:pb-10">
+        {/* Keyed by path: every navigation remounts the page and replays the entrance. */}
+        <div
+          key={location.pathname}
+          className="anim-page mx-auto w-full max-w-xl px-4 pt-4 pb-28 sm:max-w-2xl md:pb-10"
+        >
           <Outlet />
         </div>
       </main>
