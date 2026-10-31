@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink, useNavigate } from 'react-router';
 import { BellRing, House, ListChecks, Plus, SlidersHorizontal, Tags } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import Favicon from '../../../public/icons/favicon.svg'
 
 const NAV = [
   { to: '/', icon: House, key: 'nav.dashboard', end: true },
@@ -18,8 +19,12 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-e border-line bg-surface/80 px-3 py-5 backdrop-blur-xl md:flex">
       <div className="mb-6 flex items-center gap-2.5 px-2">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-accent-400 to-accent-700 text-white shadow-md shadow-accent-600/30">
-          <BellRing size={18} aria-hidden />
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl ">
+          <img
+            src="/icons/favicon.svg"
+            alt="App logo"
+            // className="h-[18px] w-[18px]"
+          />
         </span>
         <div>
           <p className="text-base leading-tight font-bold tracking-tight">{t('app.name')}</p>
