@@ -80,7 +80,9 @@ export function Sheet({ open, onClose, label, children, className }: SheetProps)
         aria-label={label}
         tabIndex={-1}
         className={cn(
-          'overlay-panel overlay-sheet flex max-h-[92dvh] w-full flex-col overflow-y-auto rounded-t-3xl bg-surface text-fg-1 shadow-pop outline-none',
+          // Phones: full-width docked sheet. Wide screens: same sheet, but a
+          // centered column — full-bleed across a monitor looks like a wall.
+          'overlay-panel overlay-sheet flex max-h-[92dvh] w-full sm:max-w-lg flex-col overflow-y-auto rounded-t-3xl bg-surface text-fg-1 shadow-pop outline-none',
           className,
         )}
       >
