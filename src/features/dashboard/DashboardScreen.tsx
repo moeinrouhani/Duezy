@@ -6,6 +6,7 @@ import { BellOff, CalendarCheck, CircleCheck, Plus, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { DualCalendarPanel, type DayMark } from '../../components/date-picker/DualCalendarPanel';
 import { Button, Chip, EmptyState } from '../../components/ui';
+import { Sheet } from '../../components/ui/Sheet';
 import { CheckButton } from '../../components/ui/CheckButton';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
 import { useReminders } from '../../hooks/useReminders';
@@ -14,6 +15,7 @@ import { useCategories } from '../../hooks/useReminders';
 import { useLocalDate } from '../../hooks/useLocalDate';
 import { useCountUp } from '../../hooks/useCountUp';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { ReminderSheet } from '../reminder-detail/ReminderSheet';
 import {
   calendarMonthOf,
   calendarMonthRange,
@@ -48,6 +50,12 @@ export function DashboardScreen() {
   const [month, setMonth] = useState<CalendarMonth>(() => calendarMonthOf(todayISO(), calendar));
   const [filter, setFilter] = useState<MonthFilter>('all');
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // Reminder shown in the detail sheet (read-only here — settling stays on the rows).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = useMemo(
+    () => reminders.find((r) => r.id === selectedId) ?? null,
+    [reminders, selectedId],
+  );
 
   // Switching calendar systems re-interprets {y, m} — re-ground on today.
   useEffect(() => {
@@ -176,11 +184,18 @@ export function DashboardScreen() {
                     ? undoOccurrence(occurrence.reminder.id, occurrence.date)
                     : completeOccurrence(occurrence.reminder.id, occurrence.date))
                 }
-                onOpen={() => navigate(`/reminder/${occurrence.reminder.id}`)}
+                onOpen={() => setSelectedId(occurrence.reminder.id)}
               />
             );
           })}
         </div>
+      )}
+
+      {/* Detail sheet — over this page, no navigation. */}
+      {selected && (
+        <Sheet open onClose={() => setSelectedId(null)} label={selected.title}>
+          <ReminderSheet reminder={selected} mode="dashboard" onClose={() => setSelectedId(null)} />
+        </Sheet>
       )}
     </div>
   );

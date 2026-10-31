@@ -143,12 +143,17 @@ export function summarizeOccurrences(occurrences: Occurrence[]): MonthSummary {
 /**
  * 0–1 progress across the reminder's bounded work; null when unbounded.
  * `completedCount` = live completions of the reminder (skips included —
- * they settle an occurrence just the same).
+ * they settle an occurrence just the same). Installments paid before
+ * tracking began (Reminder.paidCount) count toward the total.
  */
 export function reminderProgress(reminder: Reminder, completedCount: number): number | null {
   if (!reminder.recurrence) return reminder.done ? 1 : 0;
   const { end } = reminder.recurrence;
-  if (end.type === 'after') return Math.min(completedCount / Math.max(end.count, 1), 1);
+  const paid = reminder.paidCount ?? 0;
+  if (end.type === 'after') {
+    const total = Math.max(end.count + paid, 1);
+    return Math.min((completedCount + paid) / total, 1);
+  }
   if (end.type === 'on') {
     const total = occurrencesInRange(reminder.recurrence, reminder.recurrence.start, end.date).length;
     return total > 0 ? Math.min(completedCount / total, 1) : null;

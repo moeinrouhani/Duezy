@@ -38,6 +38,12 @@ export interface Reminder {
   categoryId: string;
   /** null = one-time reminder. */
   recurrence: RecurrenceRule | null;
+  /**
+   * Installments already settled before tracking began (bounded recurring
+   * series only). Progress counts them; the rule's `after` count holds only
+   * the REMAINING occurrences.
+   */
+  paidCount?: number;
   alerts: AlertPolicy;
   pinned: boolean;
   /** true when a one-time reminder is settled or a series is exhausted/skipped to end. */
@@ -127,6 +133,8 @@ export interface ReminderDraft {
   currency?: string;
   categoryId: string;
   recurrence: RecurrenceRule | null;
+  /** See Reminder.paidCount — bounded series only. */
+  paidCount?: number;
   alerts: AlertPolicy;
   pinned: boolean;
 }

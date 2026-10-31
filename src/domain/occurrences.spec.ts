@@ -153,4 +153,18 @@ describe('domain/occurrences', () => {
     };
     expect(reminderProgress(reminder({ recurrence: until }), 2)).toBe(0.5);
   });
+
+  it('reminderProgress counts installments paid before tracking began', () => {
+    const eight = {
+      freq: 'monthly' as const,
+      interval: 1,
+      calendar: 'gregorian' as const,
+      start: '2100-01-15',
+      end: { type: 'after' as const, count: 8 },
+    };
+    // 2 paid of 10 total: starts at 20%, finishes after the 8 tracked ones.
+    expect(reminderProgress(reminder({ recurrence: eight, paidCount: 2 }), 0)).toBeCloseTo(0.2);
+    expect(reminderProgress(reminder({ recurrence: eight, paidCount: 2 }), 3)).toBeCloseTo(0.5);
+    expect(reminderProgress(reminder({ recurrence: eight, paidCount: 2 }), 8)).toBe(1);
+  });
 });

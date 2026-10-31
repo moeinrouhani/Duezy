@@ -69,7 +69,7 @@ export function ReminderForm() {
       setCurrency(reminder.currency ?? '');
       setNotes(reminder.notes ?? '');
       setAlerts(reminder.alerts.offsets);
-      setRecurrence(ruleToDraft(reminder.recurrence));
+      setRecurrence(ruleToDraft(reminder.recurrence, reminder.paidCount ?? 0));
       setPinned(reminder.pinned);
       setReady(true);
     })();
@@ -90,6 +90,7 @@ export function ReminderForm() {
       setTitleError(true);
       return;
     }
+    const { rule, paidCount } = draftToRule(recurrence, dueDate);
     const draft: ReminderDraft = {
       title: title.trim(),
       dueDate,
@@ -97,7 +98,8 @@ export function ReminderForm() {
       notes: notes.trim() || undefined,
       amount: amountText.trim() ? amount : undefined,
       currency: currency.trim() || undefined,
-      recurrence: draftToRule(recurrence, dueDate),
+      recurrence: rule,
+      paidCount,
       alerts: { offsets: alerts },
       pinned,
     };

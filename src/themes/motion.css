@@ -207,6 +207,13 @@ body::before {
   .overlay-panel[data-state="closed"] { animation: d-dialog-out 0.16s ease-in both; }
 }
 
+/* Detail sheets keep the bottom-slide presentation at every viewport. */
+.overlay-panel.overlay-sheet[data-state="open"] { animation: d-sheet-in 0.34s var(--ease-out) both; }
+.overlay-panel.overlay-sheet[data-state="closed"] {
+  animation: d-sheet-out 0.24s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
 .snack[data-state="open"] { animation: d-snack-in 0.34s var(--ease-spring) both; }
 .snack[data-state="closed"] { animation: d-snack-out 0.2s ease-in both; }
 

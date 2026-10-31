@@ -5,11 +5,13 @@ import { useNavigate } from 'react-router';
 import { Bell, CircleCheck, ListChecks, Pencil, Pin, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button, Chip, EmptyState, SegmentedControl } from '../../components/ui';
+import { Sheet } from '../../components/ui/Sheet';
 import { Input } from '../../components/ui/Input';
 import { IconButton } from '../../components/ui/Button';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
 import { useConfirm } from '../../components/ui/Snackbar';
 import { StatsPanel } from './StatsPanel';
+import { ReminderSheet } from '../reminder-detail/ReminderSheet';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useCompletions } from '../../hooks/useCompletions';
 import { useLocalDate } from '../../hooks/useLocalDate';
@@ -43,6 +45,8 @@ export function RemindersScreen() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   // Rows that were just confirmed for deletion — they collapse before the data goes.
   const [leaving, setLeaving] = useState<Set<string>>(() => new Set());
+  // Reminder shown in the detail sheet (edit / pin / delete / done, no skip).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -63,6 +67,12 @@ export function RemindersScreen() {
     });
     return sortReminders(matches);
   }, [reminders, categories, query, statusFilter, t]);
+
+  // Live data for the open sheet — a done/pin/delete lands instantly.
+  const selected = useMemo(
+    () => reminders.find((r) => r.id === selectedId) ?? null,
+    [reminders, selectedId],
+  );
 
   const statusCounts = useMemo(
     () => ({
@@ -186,6 +196,7 @@ export function RemindersScreen() {
                     categoryName={category ? (category.nameKey ? t(category.nameKey) : category.name) : undefined}
                     categoryIcon={category?.icon}
                     color={CATEGORY_COLOR_HEX[category?.color ?? 'teal']}
+                    onOpen={() => setSelectedId(reminder.id)}
                     onEdit={() => navigate(`/reminder/${reminder.id}/edit`)}
                     onDelete={() => void handleDelete(reminder)}
                   />
@@ -194,6 +205,18 @@ export function RemindersScreen() {
             </div>
           )}
         </>
+      )}
+
+      {/* Detail sheet — same page underneath; done/pin/delete land live. */}
+      {selected && (
+        <Sheet open onClose={() => setSelectedId(null)} label={selected.title}>
+          <ReminderSheet
+            reminder={selected}
+            mode="manage"
+            onClose={() => setSelectedId(null)}
+            onEdit={() => navigate(`/reminder/${selected.id}/edit`)}
+          />
+        </Sheet>
       )}
     </div>
   );
@@ -209,6 +232,7 @@ function ReminderManageRow({
   categoryIcon,
   color,
   lang,
+  onOpen,
   onEdit,
   onDelete,
 }: {
@@ -220,11 +244,11 @@ function ReminderManageRow({
   categoryIcon: string | undefined;
   color: string;
   lang: 'en' | 'fa';
+  onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const localDate = useLocalDate();
   const progress = reminderProgress(reminder, completedCount);
   const overdue = !reminder.done && daysUntil(reminder.dueDate) < 0;
@@ -233,9 +257,9 @@ function ReminderManageRow({
     <div
       role="button"
       tabIndex={0}
-      onClick={() => navigate(`/reminder/${reminder.id}`)}
+      onClick={onOpen}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') navigate(`/reminder/${reminder.id}`);
+        if (event.key === 'Enter') onOpen();
       }}
       style={{ '--i': index } as CSSProperties}
       className={cn(
@@ -300,7 +324,7 @@ function ReminderManageRow({
               </span>
               <span className="shrink-0 text-[0.7rem] tabular-nums text-fg-2">
                 {reminder.recurrence?.end.type === 'after'
-                  ? `${formatNumber(Math.min(completedCount, reminder.recurrence.end.count), lang)}/${formatNumber(reminder.recurrence.end.count, lang)}`
+                  ? `${formatNumber(Math.min(completedCount + (reminder.paidCount ?? 0), reminder.recurrence.end.count + (reminder.paidCount ?? 0)), lang)}/${formatNumber(reminder.recurrence.end.count + (reminder.paidCount ?? 0), lang)}`
                   : `${formatNumber(Math.round(progress * 100), lang)}%`}
               </span>
             </div>

@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useCompletions } from '../../hooks/useCompletions';
 import { useCountUp } from '../../hooks/useCountUp';
@@ -11,6 +12,8 @@ import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { formatNumber } from '../../utils/digits';
 import { useLocalDate } from '../../hooks/useLocalDate';
 import { cn } from '../../utils/cn';
+
+type StatsWindow = 7 | 30 | 90;
 
 /** A stat tile whose number counts up when it appears or changes. */
 function StatCard({
@@ -49,13 +52,19 @@ function StatCard({
 export function StatsPanel() {
   const { t, i18n } = useTranslation();
   const lang = i18n.language === 'en' ? 'en' : 'fa';
+  const localDate = useLocalDate();
   const { reminders } = useReminders();
   const { categories } = useCategories();
-  const localDate = useLocalDate();
   const completions = useCompletions();
 
-  const stats = useMemo(() => computeStats(reminders, completions), [reminders, completions]);
-  const maxDay = Math.max(1, ...stats.last30.map((day) => day.count));
+  const [windowDays, setWindowDays] = useState<StatsWindow>(30);
+  const stats = useMemo(
+    () => computeStats(reminders, completions, windowDays),
+    [reminders, completions, windowDays],
+  );
+  const maxDay = Math.max(1, ...stats.series.map((day) => day.count));
+  const chartLabel =
+    windowDays === 7 ? t('stats.last7Label') : windowDays === 30 ? t('stats.last30Label') : t('stats.last90Label');
 
   if (stats.completedTotal === 0 && stats.activeCount === 0) {
     return <EmptyState icon={<ChartNoAxesColumn size={26} aria-hidden />} title={t('stats.noData')} />;
@@ -63,7 +72,18 @@ export function StatsPanel() {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3">
+      <SegmentedControl<StatsWindow>
+        label={t('stats.title')}
+        value={windowDays}
+        onChange={setWindowDays}
+        options={[
+          { value: 7, label: t('stats.days7') },
+          { value: 30, label: t('stats.days30') },
+          { value: 90, label: t('stats.days90') },
+        ]}
+      />
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
         <StatCard index={0} lang={lang} label={t('stats.activeLabel')} value={stats.activeCount} />
         <StatCard
           index={1}
@@ -78,7 +98,7 @@ export function StatsPanel() {
 
       <section className="mt-6">
         <div className="mb-2 flex items-center justify-between px-1">
-          <h2 className="text-xs font-semibold text-fg-2">{t('stats.last30Label')}</h2>
+          <h2 className="text-xs font-semibold text-fg-2">{chartLabel}</h2>
           <p className="text-xs text-fg-2">
             {t('stats.streakLabel')}: <span className="font-semibold text-fg-1">{formatNumber(stats.streak, lang)}</span>
           </p>
@@ -86,12 +106,12 @@ export function StatsPanel() {
         <div
           className="flex h-28 items-end gap-[3px] rounded-2xl border border-line bg-surface p-3 shadow-card"
           role="img"
-          aria-label={t('stats.last30Label')}
+          aria-label={chartLabel}
         >
-          {stats.last30.map((day, i) => (
+          {stats.series.map((day, i) => (
             <div
               key={day.date}
-              title={`${localDate.formatDate(day.date)}: ${day.count}`}
+              title={`${localDate.formatDate(day.date)}: ${formatNumber(day.count, lang)}`}
               style={{ height: `${Math.max((day.count / maxDay) * 100, 6)}%`, '--i': i } as CSSProperties}
               className={cn(
                 // Bars grow from the baseline, left to right in time order.

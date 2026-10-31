@@ -6,6 +6,7 @@ import { Chip } from '../../components/ui/EmptyState';
 import { DatePicker } from '../../components/date-picker/DatePicker';
 import { useLocalDate, weekdayOrder } from '../../hooks/useLocalDate';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { formatNumber } from '../../utils/digits';
 import { weekdayNames } from './weekdayNames';
 
 export interface RecurrenceDraft {
@@ -14,7 +15,10 @@ export interface RecurrenceDraft {
   byWeekday: Weekday[];
   endType: RecurrenceEnd['type'];
   endDate: string;
+  /** TOTAL occurrences the user wants (the rule stores total − paid). */
   endCount: number;
+  /** Installments already paid before tracking began (endType 'after' only). */
+  paidCount: number;
   calendar: CalendarSystem;
 }
 
@@ -25,28 +29,43 @@ export const EMPTY_DRAFT: RecurrenceDraft = {
   endType: 'never',
   endDate: '',
   endCount: 4,
+  paidCount: 0,
   calendar: 'jalali',
 };
 
-export function draftToRule(draft: RecurrenceDraft, dueDate: string): RecurrenceRule | null {
-  if (draft.freq === 'none') return null;
-  const end: RecurrenceEnd =
-    draft.endType === 'on' && draft.endDate
-      ? { type: 'on', date: draft.endDate }
-      : draft.endType === 'after'
-        ? { type: 'after', count: Math.max(1, draft.endCount) }
-        : { type: 'never' };
+export function draftToRule(
+  draft: RecurrenceDraft,
+  dueDate: string,
+): { rule: RecurrenceRule | null; paidCount?: number } {
+  if (draft.freq === 'none') return { rule: null };
+  let end: RecurrenceEnd;
+  let paidCount: number | undefined;
+  if (draft.endType === 'after') {
+    // The rule counts only the REMAINING occurrences; paid ones live on the
+    // reminder as paidCount so progress starts partway through the series.
+    const total = Math.max(1, draft.endCount);
+    const paid = Math.min(Math.max(0, draft.paidCount), total - 1);
+    paidCount = paid > 0 ? paid : undefined;
+    end = { type: 'after', count: total - paid };
+  } else if (draft.endType === 'on' && draft.endDate) {
+    end = { type: 'on', date: draft.endDate };
+  } else {
+    end = { type: 'never' };
+  }
   return {
-    freq: draft.freq,
-    interval: Math.max(1, draft.interval),
-    byWeekday: draft.freq === 'weekly' && draft.byWeekday.length > 0 ? draft.byWeekday : undefined,
-    calendar: draft.calendar,
-    start: dueDate,
-    end,
+    rule: {
+      freq: draft.freq,
+      interval: Math.max(1, draft.interval),
+      byWeekday: draft.freq === 'weekly' && draft.byWeekday.length > 0 ? draft.byWeekday : undefined,
+      calendar: draft.calendar,
+      start: dueDate,
+      end,
+    },
+    paidCount,
   };
 }
 
-export function ruleToDraft(rule: RecurrenceRule | null): RecurrenceDraft {
+export function ruleToDraft(rule: RecurrenceRule | null, paidCount = 0): RecurrenceDraft {
   if (!rule) return { ...EMPTY_DRAFT };
   return {
     freq: rule.freq,
@@ -54,7 +73,8 @@ export function ruleToDraft(rule: RecurrenceRule | null): RecurrenceDraft {
     byWeekday: rule.byWeekday ?? [],
     endType: rule.end.type,
     endDate: rule.end.type === 'on' ? rule.end.date : '',
-    endCount: rule.end.type === 'after' ? rule.end.count : 4,
+    endCount: rule.end.type === 'after' ? rule.end.count + paidCount : 4,
+    paidCount,
     calendar: rule.calendar,
   };
 }
@@ -76,7 +96,8 @@ export function RecurrenceEditor({
   onChange: (draft: RecurrenceDraft) => void;
   dueDate: string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language === 'en' ? 'en' : 'fa';
   const weekStart = useSettingsStore((s) => s.settings.weekStart);
   const localDate = useLocalDate();
   const patch = (partial: Partial<RecurrenceDraft>) => onChange({ ...draft, ...partial });
@@ -166,14 +187,39 @@ export function RecurrenceEditor({
                 />
               )}
               {draft.endType === 'after' && (
-                <Input
-                  label={t('recurrence.countLabel')}
-                  type="number"
-                  min={1}
-                  max={9999}
-                  value={draft.endCount}
-                  onChange={(event) => patch({ endCount: Math.max(1, Number(event.target.value) || 1) })}
-                />
+                <>
+                  <Input
+                    label={t('recurrence.countLabel')}
+                    type="number"
+                    min={1}
+                    max={9999}
+                    value={draft.endCount}
+                    onChange={(event) => {
+                      const total = Math.max(1, Number(event.target.value) || 1);
+                      patch({ endCount: total, paidCount: Math.min(draft.paidCount, total - 1) });
+                    }}
+                  />
+                  {/* Installments settled before tracking — progress starts partway. */}
+                  <Input
+                    label={t('recurrence.paidLabel')}
+                    type="number"
+                    min={0}
+                    max={draft.endCount - 1}
+                    value={draft.paidCount}
+                    onChange={(event) =>
+                      patch({ paidCount: Math.min(Math.max(0, Number(event.target.value) || 0), draft.endCount - 1) })
+                    }
+                  />
+                  {draft.paidCount > 0 && (
+                    <p className="text-xs text-fg-2">
+                      {t('recurrence.paidHint', {
+                        paid: formatNumber(draft.paidCount, lang),
+                        total: formatNumber(draft.endCount, lang),
+                        remaining: formatNumber(draft.endCount - draft.paidCount, lang),
+                      })}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
