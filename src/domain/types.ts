@@ -35,6 +35,14 @@ export interface Reminder {
   amount?: number;
   /** Display-only free text ('تومان', '$', …). */
   currency?: string;
+  /**
+   * Per-installment price overrides for bounded series, keyed by the 1-based
+   * installment number ('1'…N, counting the pre-tracking ones). An occurrence
+   * whose number has an entry is worth that amount instead of `amount`.
+   */
+  installmentAmounts?: Record<string, number>;
+  /** 16-digit bank card number when the loan belongs to someone else. */
+  cardNumber?: string;
   categoryId: string;
   /** null = one-time reminder. */
   recurrence: RecurrenceRule | null;
@@ -131,6 +139,10 @@ export interface ReminderDraft {
   notes?: string;
   amount?: number;
   currency?: string;
+  /** See Reminder.installmentAmounts — bounded series only. */
+  installmentAmounts?: Record<string, number>;
+  /** See Reminder.cardNumber. */
+  cardNumber?: string;
   categoryId: string;
   recurrence: RecurrenceRule | null;
   /** See Reminder.paidCount — bounded series only. */

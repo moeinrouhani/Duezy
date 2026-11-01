@@ -1,4 +1,4 @@
-import type { CalendarSystem, CompletionRecord, ISODate, Reminder } from './types';
+import type { CalendarSystem, CompletionRecord, ISODate, RecurrenceRule, Reminder } from './types';
 import { compareISO, parseISODate, toISODate, todayISO } from './date';
 import { jalaliMonthLength, jalaliToISO, toJalali } from './jalali';
 import { occurrencesInRange } from './recurrence';
@@ -11,12 +11,60 @@ import { occurrencesInRange } from './recurrence';
  * core both views share.
  */
 
+/** 1-based slot of an occurrence within its bounded series ('۳ از ۱۰'). */
+export interface InstallmentPosition {
+  /** Installment number as the user counts them — pre-tracking ones included. */
+  current: number;
+  total: number;
+}
+
 /** One concrete due date of a reminder, with its derived settlement state. */
 export interface Occurrence {
   reminder: Reminder;
   date: ISODate;
   checked: boolean;
   overdue: boolean;
+  /** Defined only for bounded series (end.after / end.on). */
+  position?: InstallmentPosition;
+  /** Resolved price: installment override when present, else the base amount. */
+  amount?: number;
+}
+
+/**
+ * Total installments a bounded series will ever have (pre-tracking ones
+ * included). Undefined for 'never'-ending or one-time reminders.
+ */
+export function seriesTotal(rule: RecurrenceRule, paidCount: number): number | undefined {
+  if (rule.end.type === 'after') return rule.end.count + paidCount;
+  if (rule.end.type === 'on') return occurrencesInRange(rule, rule.start, rule.end.date).length;
+  return undefined;
+}
+
+/**
+ * Price for one occurrence: the installment's override entry wins over the
+ * reminder's base amount. Keys are display numbers ('1'…total), so an
+ * override on a pre-tracking installment simply never matches.
+ */
+export function occurrenceAmount(reminder: Reminder, position?: InstallmentPosition): number | undefined {
+  if (reminder.amount === undefined) return undefined;
+  if (position) {
+    const override = reminder.installmentAmounts?.[String(position.current)];
+    if (override !== undefined) return override;
+  }
+  return reminder.amount;
+}
+
+/**
+ * Position of `iso` within the series (must be an actual occurrence of it,
+ * e.g. reminder.dueDate) — null when the series has no definite total.
+ */
+export function positionOfOccurrence(reminder: Reminder, iso: ISODate): InstallmentPosition | null {
+  if (!reminder.recurrence) return null;
+  const paid = reminder.paidCount ?? 0;
+  const total = seriesTotal(reminder.recurrence, paid);
+  if (total === undefined) return null;
+  const index = occurrencesInRange(reminder.recurrence, reminder.recurrence.start, iso).length;
+  return { current: index + paid, total };
 }
 
 /** A `{year, month}` pair in the ACTIVE calendar system (month 1-based). */
@@ -81,19 +129,24 @@ export function occurrencesBetween(
 
   for (const reminder of reminders) {
     if (reminder.deletedAt) continue;
-    const dates = reminder.recurrence
-      ? occurrencesInRange(reminder.recurrence, start, end).map((o) => o.date)
+    const paid = reminder.paidCount ?? 0;
+    const total = reminder.recurrence ? seriesTotal(reminder.recurrence, paid) : undefined;
+    const inRange = reminder.recurrence
+      ? occurrencesInRange(reminder.recurrence, start, end)
       : compareISO(reminder.dueDate, start) >= 0 && compareISO(reminder.dueDate, end) <= 0
-        ? [reminder.dueDate]
+        ? [{ date: reminder.dueDate, index: 1 }]
         : [];
-    for (const date of dates) {
+    for (const { date, index } of inRange) {
       const checked =
         doneKeys.has(`${reminder.id}:${date}`) || (!reminder.recurrence && reminder.done);
+      const position = total !== undefined ? { current: index + paid, total } : undefined;
       out.push({
         reminder,
         date,
         checked,
         overdue: !checked && compareISO(date, today) < 0,
+        position,
+        amount: occurrenceAmount(reminder, position),
       });
     }
   }
@@ -126,14 +179,16 @@ export function summarizeOccurrences(occurrences: Occurrence[]): MonthSummary {
   for (const o of occurrences) {
     if (o.checked) paidCount++;
     if (o.overdue) overdueCount++;
-    if (o.reminder.amount !== undefined) {
+    // Occurrences carry their resolved price (installment overrides applied).
+    const amount = o.amount ?? o.reminder.amount;
+    if (amount !== undefined) {
       const key = o.reminder.currency ?? '';
       const bucket =
         byCurrency.get(key) ??
         ({ currency: o.reminder.currency, total: 0, paid: 0, unpaid: 0 } satisfies MonthMoney);
-      bucket.total += o.reminder.amount;
-      if (o.checked) bucket.paid += o.reminder.amount;
-      else bucket.unpaid += o.reminder.amount;
+      bucket.total += amount;
+      if (o.checked) bucket.paid += amount;
+      else bucket.unpaid += amount;
       byCurrency.set(key, bucket);
     }
   }

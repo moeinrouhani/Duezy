@@ -7,8 +7,8 @@ export class DuezyDB extends Dexie {
   categories!: Dexie.Table<Category, string>;
   completions!: Dexie.Table<CompletionRecord, string>;
 
-  constructor() {
-    super('duezy');
+  constructor(name = 'duezy') {
+    super(name);
     this.version(1).stores({
       // Only fields we query on get an index; everything else lives in the blob.
       reminders: 'id, dueDate, categoryId, updatedAt, deletedAt',

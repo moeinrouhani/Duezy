@@ -9,6 +9,7 @@ import { Button, Chip, EmptyState } from '../../components/ui';
 import { Sheet } from '../../components/ui/Sheet';
 import { CheckButton } from '../../components/ui/CheckButton';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
+import { CardCopyChip } from '../../components/ui/CardCopy';
 import { useReminders } from '../../hooks/useReminders';
 import { useCompletions } from '../../hooks/useCompletions';
 import { useCategories } from '../../hooks/useReminders';
@@ -352,7 +353,7 @@ function OccurrenceRow({
 }) {
   const { t } = useTranslation();
   const localDate = useLocalDate();
-  const { reminder, date, checked, overdue } = occurrence;
+  const { reminder, date, checked, overdue, position } = occurrence;
 
   return (
     <div
@@ -395,13 +396,25 @@ function OccurrenceRow({
             {localDate.formatDate(date)} · {localDate.relative(date)}
           </span>
           {categoryName && <span>· {categoryName}</span>}
-          {reminder.amount !== undefined && (
+          {occurrence.amount !== undefined && (
             <span className="font-medium text-fg-1/80">
-              · {formatNumber(reminder.amount, lang)}
+              · {formatNumber(occurrence.amount, lang)}
               {reminder.currency ? ` ${reminder.currency}` : ''}
             </span>
           )}
         </div>
+
+        {/* Installment slot and recipient card — only when they mean something. */}
+        {(position || reminder.cardNumber) && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs">
+            {position && (
+              <span className="inline-flex items-center rounded-full bg-surface-2/70 px-2 py-0.5 font-medium tabular-nums text-fg-2">
+                {t('dashboard.installmentOf', { current: position.current, total: position.total })}
+              </span>
+            )}
+            {reminder.cardNumber && <CardCopyChip card={reminder.cardNumber} lang={lang} />}
+          </div>
+        )}
       </div>
 
       <CheckButton

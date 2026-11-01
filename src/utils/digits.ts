@@ -50,3 +50,21 @@ export function formatAmountInput(text: string, lang: Lang): string {
   const grouped = latin.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return lang === 'fa' ? toFaDigits(grouped).replace(/,/g, '٬') : grouped;
 }
+
+/** Digits of a card number as typed in either digit system, capped at 16. */
+export function parseCardDigits(text: string): string {
+  return toLatinDigits(text).replace(/\D/g, '').slice(0, 16);
+}
+
+/** Group a card's digits in 4s and localize: '6037991234567890' → '۶۰۳۷-۹۹۱۲-…'. */
+export function formatCardNumber(digits: string, lang: Lang): string {
+  const grouped = digits.replace(/(\d{4})(?=\d)/g, '$1-');
+  return lang === 'fa' ? toFaDigits(grouped) : grouped;
+}
+
+/** Format a card number AS THE USER TYPES: digits only, 4-4-4-4 grouped. */
+export function formatCardInput(text: string, lang: Lang): string {
+  const digits = parseCardDigits(text);
+  if (!digits) return '';
+  return formatCardNumber(digits, lang);
+}

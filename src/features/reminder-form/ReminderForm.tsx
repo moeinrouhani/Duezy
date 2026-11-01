@@ -14,12 +14,13 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { todayISO } from '../../domain/date';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { cn } from '../../utils/cn';
-import { parseAmount, formatAmountInput } from '../../utils/digits';
+import { parseAmount, formatAmountInput, formatCardInput, parseCardDigits } from '../../utils/digits';
 import type { AlertOffset, ReminderDraft } from '../../domain/types';
 import { AlertPicker } from './AlertPicker';
 import {
   RecurrenceEditor,
   EMPTY_DRAFT,
+  cleanInstallmentAmounts,
   draftToRule,
   ruleToDraft,
   type RecurrenceDraft,
@@ -47,6 +48,10 @@ export function ReminderForm() {
   const [pinned, setPinned] = useState(false);
   const [advanced, setAdvanced] = useState(false);
   const [titleError, setTitleError] = useState(false);
+  // Loan-for-someone-else: presence of a card number IS the flag.
+  const [forOther, setForOther] = useState(false);
+  const [cardText, setCardText] = useState('');
+  const [cardError, setCardError] = useState(false);
   const [ready, setReady] = useState(!editing);
 
   // Load existing reminder when editing.
@@ -70,7 +75,9 @@ export function ReminderForm() {
       setCurrency(reminder.currency ?? '');
       setNotes(reminder.notes ?? '');
       setAlerts(reminder.alerts.offsets);
-      setRecurrence(ruleToDraft(reminder.recurrence, reminder.paidCount ?? 0));
+      setRecurrence(ruleToDraft(reminder.recurrence, reminder.paidCount ?? 0, reminder.installmentAmounts));
+      setForOther(reminder.cardNumber !== undefined);
+      setCardText(reminder.cardNumber ? formatCardInput(reminder.cardNumber, lang) : '');
       setPinned(reminder.pinned);
       setReady(true);
     })();
@@ -91,7 +98,17 @@ export function ReminderForm() {
       setTitleError(true);
       return;
     }
+    // A loan marked for someone else must carry that person's card number.
+    const cardDigits = parseCardDigits(cardText);
+    if (forOther && cardDigits.length !== 16) {
+      setCardError(true);
+      return;
+    }
     const { rule, paidCount } = draftToRule(recurrence, dueDate);
+    const overrides =
+      rule && rule.end.type === 'after'
+        ? cleanInstallmentAmounts(recurrence.installmentAmounts, rule.end.count + (paidCount ?? 0))
+        : undefined;
     const draft: ReminderDraft = {
       title: title.trim(),
       dueDate,
@@ -99,6 +116,8 @@ export function ReminderForm() {
       notes: notes.trim() || undefined,
       amount: amountText.trim() ? amount : undefined,
       currency: currency.trim() || undefined,
+      installmentAmounts: overrides,
+      cardNumber: forOther ? cardDigits : undefined,
       recurrence: rule,
       paidCount,
       alerts: { offsets: alerts },
@@ -218,8 +237,39 @@ export function ReminderForm() {
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
               />
+              <div className="flex flex-col gap-3">
+                <Toggle
+                  label={t('form.forOtherLabel')}
+                  checked={forOther}
+                  onChange={(value) => {
+                    setForOther(value);
+                    setCardError(false);
+                  }}
+                />
+                {forOther && (
+                  <div className="anim-fade-in">
+                    <Input
+                      label={t('form.cardLabel')}
+                      placeholder={t('form.cardPlaceholder')}
+                      value={cardText}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      error={cardError ? t('form.cardRequired') : undefined}
+                      onChange={(event) => {
+                        setCardText(formatCardInput(event.target.value, lang));
+                        setCardError(false);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
               <Toggle label={t('form.pinnedLabel')} checked={pinned} onChange={setPinned} />
-              <RecurrenceEditor draft={recurrence} onChange={setRecurrence} dueDate={dueDate} />
+              <RecurrenceEditor
+                draft={recurrence}
+                onChange={setRecurrence}
+                dueDate={dueDate}
+                currency={currency.trim() || undefined}
+              />
             </div>
           </Collapse>
         </div>

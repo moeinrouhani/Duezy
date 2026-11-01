@@ -171,8 +171,12 @@ export class DexieReminderRepository implements ReminderRepository {
       if (!reminder) throw new Error(`Reminder ${id} not found`);
       const restored: Reminder = {
         ...reminder,
-        // Undoing the pointer occurrence (or a finished series) revives it.
-        dueDate: compareISO(dueDate, reminder.dueDate) >= 0 ? dueDate : reminder.dueDate,
+        // The pointer only ever advances past an occurrence when THAT
+        // occurrence is completed, so an unchecked date before the pointer
+        // means the pointer is sitting past it — walk it back. Dates at or
+        // after the pointer never moved it; restoring them would wrongly
+        // skip unsettled occurrences in between.
+        dueDate: compareISO(dueDate, reminder.dueDate) < 0 ? dueDate : reminder.dueDate,
         done: false,
         updatedAt: now,
       };

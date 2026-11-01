@@ -33,6 +33,8 @@
     "daysOverdue_other": "{{count}} days overdue",
     "loading": "Loading…",
     "back": "Back",
+    "add": "Add",
+    "copyCard": "Copy card number",
     "updateAvailable": "A new version is available",
     "reload": "Reload"
   },
@@ -51,7 +53,8 @@
     "dueLabel": "Due",
     "paidLabel": "Paid",
     "unpaidLabel": "Unpaid",
-    "allPaid": "Everything is paid this month"
+    "allPaid": "Everything is paid this month",
+    "installmentOf": "Installment {{current}}/{{total}}"
   },
   "reminders": {
     "tabList": "Reminders",
@@ -84,7 +87,11 @@
     "moreOptions": "More options",
     "lessOptions": "Fewer options",
     "titleRequired": "Title is required",
-    "pinnedLabel": "Pin to top"
+    "pinnedLabel": "Pin to top",
+    "forOtherLabel": "Loan for another person",
+    "cardLabel": "Their card number",
+    "cardPlaceholder": "6037-9912-3456-7890",
+    "cardRequired": "The card number must be 16 digits"
   },
   "recurrence": {
     "label": "Repeat",
@@ -108,6 +115,10 @@
     "countLabel": "Occurrences",
     "paidLabel": "Already paid",
     "paidHint": "{{paid}} of {{total}} paid — {{remaining}} to go",
+    "customAmountsLabel": "Different installment prices",
+    "customAmountHint": "Give specific installments their own price — e.g. the first and the last.",
+    "installmentNo": "Installment no.",
+    "installmentShort": "Installment {{n}}",
     "calendarBasis": "Month math follows",
     "calendarBasisJalali": "Jalali months",
     "calendarBasisGregorian": "Gregorian months",
@@ -139,6 +150,8 @@
     "skippedToast": "Occurrence skipped",
     "undoneToast": "Restored",
     "amountLabel": "Amount",
+    "customAmountsLabel": "Custom installment prices",
+    "cardLabel": "Recipient card",
     "notesLabel": "Notes",
     "alertsLabel": "Alerts",
     "deleteTitle": "Delete this reminder?",

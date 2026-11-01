@@ -4,8 +4,11 @@ import {
   addCalendarMonths,
   calendarMonthOf,
   calendarMonthRange,
+  occurrenceAmount,
   occurrencesBetween,
+  positionOfOccurrence,
   reminderProgress,
+  seriesTotal,
   summarizeOccurrences,
 } from './occurrences';
 import { jalaliToISO } from './jalali';
@@ -166,5 +169,117 @@ describe('domain/occurrences', () => {
     expect(reminderProgress(reminder({ recurrence: eight, paidCount: 2 }), 0)).toBeCloseTo(0.2);
     expect(reminderProgress(reminder({ recurrence: eight, paidCount: 2 }), 3)).toBeCloseTo(0.5);
     expect(reminderProgress(reminder({ recurrence: eight, paidCount: 2 }), 8)).toBe(1);
+  });
+
+  it('seriesTotal: after-count includes pre-tracking installments; on-date counts the series', () => {
+    const after = {
+      freq: 'monthly' as const,
+      interval: 1,
+      calendar: 'gregorian' as const,
+      start: '2100-01-15',
+      end: { type: 'after' as const, count: 8 },
+    };
+    expect(seriesTotal(after, 2)).toBe(10);
+    expect(seriesTotal(after, 0)).toBe(8);
+    const until = { ...after, end: { type: 'on' as const, date: '2100-04-15' } };
+    expect(seriesTotal(until, 0)).toBe(4);
+    const forever = { ...after, end: { type: 'never' as const } };
+    expect(seriesTotal(forever, 0)).toBeUndefined();
+  });
+
+  it('occurrencesBetween numbers installments 1..total, pre-tracking ones included', () => {
+    // A 10-installment loan: count holds only the REMAINING occurrences.
+    const ten = {
+      freq: 'monthly' as const,
+      interval: 1,
+      calendar: 'gregorian' as const,
+      start: '2100-01-15',
+      end: { type: 'after' as const, count: 10 },
+    };
+    const rows = occurrencesBetween([reminder({ recurrence: ten })], [], '2100-01-01', '2100-02-28');
+    expect(rows.map((o) => o.position)).toEqual([
+      { current: 1, total: 10 },
+      { current: 2, total: 10 },
+    ]);
+
+    // Same 10-installment loan, but 2 were paid before tracking began
+    // (8 remaining): this January is really #3 of 10.
+    const tenWithPaid = { ...ten, end: { type: 'after' as const, count: 8 } };
+    const rowsWithPaid = occurrencesBetween(
+      [reminder({ recurrence: tenWithPaid, paidCount: 2 })],
+      [],
+      '2100-01-01',
+      '2100-01-31',
+    );
+    expect(rowsWithPaid[0].position).toEqual({ current: 3, total: 10 });
+  });
+
+  it('occurrencesBetween leaves unbounded and one-time occurrences without a position', () => {
+    const forever = {
+      freq: 'monthly' as const,
+      interval: 1,
+      calendar: 'gregorian' as const,
+      start: '2100-01-15',
+      end: { type: 'never' as const },
+    };
+    const recurring = occurrencesBetween([reminder({ recurrence: forever })], [], '2100-01-01', '2100-01-31');
+    expect(recurring[0].position).toBeUndefined();
+    const oneTime = occurrencesBetween([reminder({ dueDate: '2100-01-20' })], [], '2100-01-01', '2100-01-31');
+    expect(oneTime[0].position).toBeUndefined();
+  });
+
+  it('occurrenceAmount resolves per-installment overrides by installment number', () => {
+    // A 10-installment loan with 2 pre-tracking payments: tracked slots are 3..10.
+    const ten = {
+      freq: 'monthly' as const,
+      interval: 1,
+      calendar: 'gregorian' as const,
+      start: '2100-01-15',
+      end: { type: 'after' as const, count: 8 },
+    };
+    const r = reminder({ recurrence: ten, paidCount: 2, amount: 1000, installmentAmounts: { '1': 500, '10': 2000 } });
+
+    // Display numbers: the tracked series runs 3..10 of 10.
+    expect(occurrenceAmount(r, { current: 1, total: 10 })).toBe(500); // pre-tracking, never rendered
+    expect(occurrenceAmount(r, { current: 3, total: 10 })).toBe(1000);
+    expect(occurrenceAmount(r, { current: 9, total: 10 })).toBe(1000);
+    expect(occurrenceAmount(r, { current: 10, total: 10 })).toBe(2000);
+    expect(occurrenceAmount(r)).toBe(1000); // unpositioned falls back to base
+    expect(occurrenceAmount(reminder({ amount: 1000 }), { current: 1, total: 1 })).toBe(1000);
+  });
+
+  it('positionOfOccurrence places dueDate within the series', () => {
+    // A 10-installment loan with 2 pre-tracking payments.
+    const ten = {
+      freq: 'monthly' as const,
+      interval: 1,
+      calendar: 'gregorian' as const,
+      start: '2100-01-15',
+      end: { type: 'after' as const, count: 8 },
+    };
+    expect(positionOfOccurrence(reminder({ recurrence: ten, paidCount: 2 }), '2100-01-15')).toEqual({
+      current: 3,
+      total: 10,
+    });
+    expect(positionOfOccurrence(reminder({ recurrence: ten, paidCount: 2 }), '2100-02-15')).toEqual({
+      current: 4,
+      total: 10,
+    });
+    expect(positionOfOccurrence(reminder({ recurrence: ten }), '2100-01-15')).toEqual({ current: 1, total: 8 });
+    expect(positionOfOccurrence(reminder({ dueDate: '2100-01-15' }), '2100-01-15')).toBeNull();
+  });
+
+  it('summarizeOccurrences prices each occurrence with its override', () => {
+    const r = reminder({
+      amount: 1000,
+      currency: '$',
+      installmentAmounts: { '2': 3000 },
+    });
+    const rows = [
+      { reminder: r, date: '2100-01-01', checked: true, overdue: false },
+      { reminder: r, date: '2100-02-01', checked: false, overdue: false, amount: 3000 },
+    ];
+    const summary = summarizeOccurrences(rows);
+    expect(summary.money[0]).toMatchObject({ total: 4000, paid: 1000, unpaid: 3000 });
   });
 });

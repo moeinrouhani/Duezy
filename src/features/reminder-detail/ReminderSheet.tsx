@@ -1,4 +1,6 @@
-import type { ReactElement, CSSProperties } from 'react';import { useTranslation } from 'react-i18next';
+import type { ReactElement, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Bell,
   BellRing,
@@ -6,6 +8,7 @@ import {
   Check,
   CircleAlert,
   CircleCheck,
+  CreditCard,
   FileText,
   Pencil,
   Pin,
@@ -16,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Button, IconButton } from '../../components/ui/Button';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
+import { CardCopyChip } from '../../components/ui/CardCopy';
 import { useConfirm } from '../../components/ui/Snackbar';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useCompletions } from '../../hooks/useCompletions';
@@ -24,7 +28,7 @@ import { useUiStore } from '../../stores/uiStore';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { formatNumber } from '../../utils/digits';
 import { upcomingOccurrences } from '../../domain/recurrence';
-import { reminderProgress } from '../../domain/occurrences';
+import { occurrenceAmount, positionOfOccurrence, reminderProgress } from '../../domain/occurrences';
 import { sectionOf } from '../../domain/alerts';
 import type { ReminderSection } from '../../domain/alerts';
 import type { RecurrenceRule, Reminder } from '../../domain/types';
@@ -100,12 +104,32 @@ export function ReminderSheet({
   };
 
   const paid = reminder.paidCount ?? 0;
-  const rows: { label: string; value?: string; icon: ReactElement }[] = [
+  const overrideEntries = Object.entries(reminder.installmentAmounts ?? {})
+    .map(([key, value]) => ({ num: Number(key), value }))
+    .filter((entry) => Number.isInteger(entry.num) && entry.num >= 1 && Number.isFinite(entry.value))
+    .sort((a, b) => a.num - b.num);
+  const rows: { label: string; value?: ReactNode; icon: ReactElement }[] = [
     ...(reminder.amount !== undefined
       ? [{
           label: t('detail.amountLabel'),
           value: `${formatNumber(reminder.amount, lang)}${reminder.currency ? ` ${reminder.currency}` : ''}`,
           icon: <Wallet size={16} aria-hidden />,
+        }]
+      : []),
+    ...(overrideEntries.length > 0
+      ? [{
+          label: t('detail.customAmountsLabel'),
+          value: overrideEntries
+            .map((entry) => `${t('recurrence.installmentShort', { n: entry.num })}: ${formatNumber(entry.value, lang)}`)
+            .join(' · '),
+          icon: <Wallet size={16} aria-hidden />,
+        }]
+      : []),
+    ...(reminder.cardNumber
+      ? [{
+          label: t('detail.cardLabel'),
+          value: <CardCopyChip card={reminder.cardNumber} lang={lang} className="text-sm" />,
+          icon: <CreditCard size={16} aria-hidden />,
         }]
       : []),
     ...(reminder.recurrence
@@ -242,17 +266,32 @@ export function ReminderSheet({
           <section className="anim-rise" style={{ '--i': 3 } as CSSProperties}>
             <h2 className="mb-2 px-1 text-xs font-semibold text-fg-2">{t('recurrence.nextOccurrences')}</h2>
             <ul className="flex flex-col gap-2 rounded-2xl border border-line bg-surface p-4 shadow-card">
-              {preview.map((iso, i) => (
-                <li key={iso} className="flex items-center gap-3 text-sm text-fg-1">
-                  {/* Timeline dot: fades with distance from now. */}
-                  <span
-                    aria-hidden
-                    className="h-2 w-2 shrink-0 rounded-full bg-accent-500 dark:bg-accent-400"
-                    style={{ opacity: 1 - i * 0.28 }}
-                  />
-                  {localDate.formatDate(iso)}
-                </li>
-              ))}
+              {preview.map((iso, i) => {
+                const position = positionOfOccurrence(reminder, iso);
+                const amount = occurrenceAmount(reminder, position ?? undefined);
+                const meta = [
+                  ...(position
+                    ? [t('dashboard.installmentOf', { current: position.current, total: position.total })]
+                    : []),
+                  ...(amount !== undefined
+                    ? [`${formatNumber(amount, lang)}${reminder.currency ? ` ${reminder.currency}` : ''}`]
+                    : []),
+                ];
+                return (
+                  <li key={iso} className="flex items-center gap-3 text-sm text-fg-1">
+                    {/* Timeline dot: fades with distance from now. */}
+                    <span
+                      aria-hidden
+                      className="h-2 w-2 shrink-0 rounded-full bg-accent-500 dark:bg-accent-400"
+                      style={{ opacity: 1 - i * 0.28 }}
+                    />
+                    {localDate.formatDate(iso)}
+                    {meta.length > 0 && (
+                      <span className="ms-auto shrink-0 text-xs tabular-nums text-fg-2">{meta.join(' · ')}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
