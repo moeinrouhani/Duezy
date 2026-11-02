@@ -90,13 +90,14 @@ body::before {
   from { opacity: 1; transform: none; }
   to { opacity: 0; transform: translateY(6px) scale(0.97); }
 }
+/* Snackbar drops from the top edge (it hangs under the status bar). */
 @keyframes d-snack-in {
-  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
   to { opacity: 1; transform: none; }
 }
 @keyframes d-snack-out {
   from { opacity: 1; transform: none; }
-  to { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.97); }
 }
 @keyframes d-shrink {
   from { transform: scaleX(1); }
@@ -207,12 +208,8 @@ body::before {
   .overlay-panel[data-state="closed"] { animation: d-dialog-out 0.16s ease-in both; }
 }
 
-/* Detail sheets keep the bottom-slide presentation at every viewport. */
-.overlay-panel.overlay-sheet[data-state="open"] { animation: d-sheet-in 0.34s var(--ease-out) both; }
-.overlay-panel.overlay-sheet[data-state="closed"] {
-  animation: d-sheet-out 0.24s cubic-bezier(0.4, 0, 1, 1) both;
-  pointer-events: none;
-}
+/* Detail sheets animate in JS (Sheet.tsx) — their snap positions depend on
+   measured heights, so CSS keyframes would fight the inline transform. */
 
 .snack[data-state="open"] { animation: d-snack-in 0.34s var(--ease-spring) both; }
 .snack[data-state="closed"] { animation: d-snack-out 0.2s ease-in both; }

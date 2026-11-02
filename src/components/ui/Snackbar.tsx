@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { X } from 'lucide-react';
 import { useUiStore, type Snackbar as SnackbarData } from '../../stores/uiStore';
 
 const EXIT_MS = 200;
 
 /** Single snackbar host, mounted once in AppShell. */
 export function Snackbar() {
+  const { t } = useTranslation();
   const snackbar = useUiStore((s) => s.snackbar);
   const dismiss = useUiStore((s) => s.dismissSnackbar);
 
@@ -24,10 +26,10 @@ export function Snackbar() {
   const state = snackbar ? 'open' : 'closed';
 
   return (
+    // Hangs from the top edge, below any notch/home-indicator inset.
     <div
-      role="status"
-      aria-live="polite"
-      className="fixed bottom-20 md:bottom-6 inset-x-0 z-60 flex justify-center px-4 pointer-events-none"
+      className="pointer-events-none fixed inset-x-0 z-60 flex justify-center px-4"
+      style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}
     >
       {/* Keyed by id: a replacement message re-plays the entrance. */}
       <div
@@ -47,6 +49,15 @@ export function Snackbar() {
             {shown.actionLabel}
           </button>
         )}
+        <button
+          type="button"
+          aria-label={t('common.close')}
+          title={t('common.close')}
+          className="-me-1 shrink-0 rounded-lg p-1 transition-[background-color,transform] duration-150 hover:bg-white/10 active:scale-90 dark:hover:bg-black/10"
+          onClick={dismiss}
+        >
+          <X size={15} aria-hidden />
+        </button>
         {snackbar && (
           <span
             aria-hidden
