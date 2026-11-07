@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
-import type { CalendarSystem, RecurrenceEnd, RecurrenceFreq, RecurrenceRule, Weekday } from '../../domain/types';
+import type { CalendarSystem, RecurrenceEnd, RecurrenceFreq, RecurrenceRule, Reminder, Weekday } from '../../domain/types';
 import { SegmentedControl } from '../../components/ui/SegmentedControl';
 import { Input } from '../../components/ui/Input';
 import { Chip } from '../../components/ui/EmptyState';
@@ -60,9 +60,25 @@ export function cleanInstallmentAmounts(
   return Object.keys(cleaned).length > 0 ? cleaned : undefined;
 }
 
+/**
+ * Same series = same cadence AND the pointer wasn't moved. Then the stored
+ * `start` is still the right anchor; replacing it with the (advanced) due
+ * date used to restart the occurrence count — an edit of just the title
+ * turned a 5-installment loan with 2 paid into 5 more installments and hid
+ * past months from the dashboard.
+ */
+function keepsSeriesAnchor(draft: RecurrenceDraft, dueDate: string, original?: Reminder | null): boolean {
+  if (!original || !original.recurrence || original.dueDate !== dueDate) return false;
+  const old = original.recurrence;
+  const sameDays =
+    (old.byWeekday ?? []).slice().sort().join() === (draft.freq === 'weekly' ? draft.byWeekday : []).slice().sort().join();
+  return old.freq === draft.freq && old.interval === Math.max(1, draft.interval) && old.calendar === draft.calendar && sameDays;
+}
+
 export function draftToRule(
   draft: RecurrenceDraft,
   dueDate: string,
+  original?: Reminder | null,
 ): { rule: RecurrenceRule | null; paidCount?: number } {
   if (draft.freq === 'none') return { rule: null };
   let end: RecurrenceEnd;
@@ -85,7 +101,7 @@ export function draftToRule(
       interval: Math.max(1, draft.interval),
       byWeekday: draft.freq === 'weekly' && draft.byWeekday.length > 0 ? draft.byWeekday : undefined,
       calendar: draft.calendar,
-      start: dueDate,
+      start: original?.recurrence && keepsSeriesAnchor(draft, dueDate, original) ? original.recurrence.start : dueDate,
       end,
     },
     paidCount,

@@ -6,7 +6,6 @@ import { BellOff, CalendarCheck, CircleCheck, Plus, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { DualCalendarPanel, type DayMark } from '../../components/date-picker/DualCalendarPanel';
 import { Button, Chip, EmptyState } from '../../components/ui';
-import { Sheet } from '../../components/ui/Sheet';
 import { CheckButton } from '../../components/ui/CheckButton';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
 import { CardCopyChip } from '../../components/ui/CardCopy';
@@ -16,7 +15,7 @@ import { useCategories } from '../../hooks/useReminders';
 import { useLocalDate } from '../../hooks/useLocalDate';
 import { useCountUp } from '../../hooks/useCountUp';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { ReminderSheet } from '../reminder-detail/ReminderSheet';
+import { ReminderSheetHost } from '../reminder-detail/ReminderSheetHost';
 import {
   calendarMonthOf,
   calendarMonthRange,
@@ -53,10 +52,6 @@ export function DashboardScreen() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   // Reminder shown in the detail sheet (read-only here — settling stays on the rows).
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = useMemo(
-    () => reminders.find((r) => r.id === selectedId) ?? null,
-    [reminders, selectedId],
-  );
 
   // Switching calendar systems re-interprets {y, m} — re-ground on today.
   useEffect(() => {
@@ -193,11 +188,7 @@ export function DashboardScreen() {
       )}
 
       {/* Detail sheet — over this page, no navigation. */}
-      {selected && (
-        <Sheet open onClose={() => setSelectedId(null)} label={selected.title}>
-          <ReminderSheet reminder={selected} mode="dashboard" onClose={() => setSelectedId(null)} />
-        </Sheet>
-      )}
+      <ReminderSheetHost reminderId={selectedId} mode="dashboard" onClose={() => setSelectedId(null)} />
     </div>
   );
 }
@@ -361,7 +352,13 @@ function OccurrenceRow({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') onOpen();
+        // Only react to keys pressed on the row itself — Enter/Space on the
+        // nested check button bubbles up here and used to open the sheet too.
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
       }}
       style={{ '--i': index } as CSSProperties}
       className={cn(

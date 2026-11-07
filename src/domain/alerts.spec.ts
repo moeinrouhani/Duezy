@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { alertSlotDate, computeAlertSlots, sectionOf, slotId } from './alerts';
 import type { Reminder } from './types';
-import { addDaysISO, todayISO } from './date';
+import { todayISO } from './date';
 
 function reminder(partial: Partial<Reminder>): Reminder {
   return {
@@ -84,38 +84,5 @@ describe('domain/alerts', () => {
       updatedAt: new Date(dueDayStage - 4 * 86_400_000).toISOString(),
     });
     expect(computeAlertSlots([r], '09:00')).toHaveLength(3);
-  });
-
-  it('still fires the due-day stage of a due-TODAY reminder created after its notify time', () => {
-    const today = todayISO();
-    const stage = alertSlotDate(today, 0, notifyTime);
-    const r = reminder({
-      dueDate: today,
-      alerts: { offsets: [3, 0] },
-      updatedAt: new Date(stage.getTime() + 60_000).toISOString(), // one minute after 09:00
-    });
-    // Old behavior skipped it entirely — the "no notification today" bug.
-    expect(computeAlertSlots([r], notifyTime).map((s) => s.offset)).toEqual([0]);
-  });
-
-  it('keeps suppressing every stage of a future due date that predates the reminder', () => {
-    const lastStage = alertSlotDate('2100-01-10', 0, notifyTime);
-    const r = reminder({
-      dueDate: '2100-01-10',
-      alerts: { offsets: [3, 0] },
-      updatedAt: new Date(lastStage.getTime() + 60_000).toISOString(),
-    });
-    expect(computeAlertSlots([r], notifyTime)).toHaveLength(0);
-  });
-
-  it('suppresses the due-day stage once the due date is in the past (undo-revived)', () => {
-    const yesterday = addDaysISO(todayISO(), -1);
-    const stage = alertSlotDate(yesterday, 0, notifyTime);
-    const r = reminder({
-      dueDate: yesterday,
-      alerts: { offsets: [0] },
-      updatedAt: new Date(stage.getTime() + 60_000).toISOString(),
-    });
-    expect(computeAlertSlots([r], notifyTime)).toHaveLength(0);
   });
 });

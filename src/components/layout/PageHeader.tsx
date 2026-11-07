@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { IconButton } from '../ui/Button';
+import { goBack } from '../../utils/navigation';
 
 interface Props {
   title: string;
@@ -19,7 +20,7 @@ export function PageHeader({ title, subtitle, showBack, actions }: Props) {
     <header className="mb-4 flex min-h-11 items-center gap-2">
       {showBack && (
         // Points toward the start edge: left in LTR, right in RTL.
-        <IconButton label={t('common.back')} onClick={() => void navigate(-1)} className="-ms-2">
+        <IconButton label={t('common.back')} onClick={() => goBack(navigate)} className="-ms-2">
           <ArrowLeft size={20} className="rtl:rotate-180" />
         </IconButton>
       )}

@@ -10,6 +10,25 @@ import type { ReminderRepository } from './types';
 export class DexieReminderRepository implements ReminderRepository {
   constructor(private readonly db: DuezyDB) {}
 
+  /**
+   * Next series date after `from` that is NOT already settled. Occurrences can
+   * be ticked ahead of the pointer from the dashboard; landing the pointer on
+   * one of those left an already-paid date showing as due (and a second tick
+   * created a duplicate completion). Null = the series is finished.
+   */
+  private async nextUnsettled(reminder: Reminder, from: ISODate): Promise<ISODate | null> {
+    if (!reminder.recurrence) return null;
+    const settled = new Set(
+      (await this.db.completions.where('reminderId').equals(reminder.id).toArray())
+        .filter((c) => !c.deletedAt)
+        .map((c) => c.dueDateCompleted),
+    );
+    let next = nextOccurrence(reminder.recurrence, from);
+    let guard = 0;
+    while (next && settled.has(next) && guard++ < 1000) next = nextOccurrence(reminder.recurrence, next);
+    return next;
+  }
+
   async list(filter?: { activeOnly?: boolean }): Promise<Reminder[]> {
     const all = await this.db.reminders.toArray();
     const activeOnly = filter?.activeOnly ?? true;
@@ -33,8 +52,9 @@ export class DexieReminderRepository implements ReminderRepository {
       const updated: Reminder = {
         ...current,
         ...patch,
-        // Editing a done one-time reminder brings it back to life.
-        done: patch.dueDate ? false : current.done,
+        // Moving a done reminder to a new date brings it back to life — but
+        // merely re-saving it (same date, new notes) must not undo "done".
+        done: patch.dueDate !== undefined && patch.dueDate !== current.dueDate ? false : current.done,
         updatedAt: new Date().toISOString(),
       };
       await this.db.reminders.put(updated);
@@ -73,7 +93,7 @@ export class DexieReminderRepository implements ReminderRepository {
       await this.db.completions.put(completion);
 
       let updated: Reminder;
-      const next = reminder.recurrence ? nextOccurrence(reminder.recurrence, reminder.dueDate) : null;
+      const next = await this.nextUnsettled(reminder, reminder.dueDate);
       if (next) {
         updated = { ...reminder, dueDate: next, updatedAt: now };
       } else {
@@ -141,7 +161,7 @@ export class DexieReminderRepository implements ReminderRepository {
       if (compareISO(dueDate, reminder.dueDate) === 0 && !reminder.done) {
         // The current occurrence: advance the pointer or finish the series —
         // exactly like complete().
-        const next = reminder.recurrence ? nextOccurrence(reminder.recurrence, reminder.dueDate) : null;
+        const next = await this.nextUnsettled(reminder, reminder.dueDate);
         updated = next
           ? { ...reminder, dueDate: next, updatedAt: now }
           : { ...reminder, done: true, updatedAt: now };

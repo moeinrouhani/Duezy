@@ -1,7 +1,7 @@
-import { addDays, addMonths, addYears } from 'date-fns';
+import { addDays, addMonths, addYears, differenceInCalendarDays } from 'date-fns';
 import type { ISODate, RecurrenceRule, Weekday } from './types';
 import { addDaysISO, compareISO, parseISODate, toISODate } from './date';
-import { addJalaliMonths, addJalaliYears } from './jalali';
+import { addJalaliMonths, addJalaliYears, toJalali } from './jalali';
 
 /** Hard cap so a corrupt rule can never hang the app. */
 const MAX_WALK = 20_000;
@@ -16,15 +16,38 @@ export function stepOccurrence(rule: RecurrenceRule, iso: ISODate): ISODate {
       return addDaysISO(iso, rule.interval);
     case 'weekly':
       return stepWeekly(rule, iso);
-    case 'monthly':
+    // Month/year steps are measured from the immutable series anchor, never
+    // chained from the previous (possibly clamped) date — chaining made a
+    // bill on the 31st fall to the 28th in February and STAY there
+    // (31 → 28 → 28 → 28 …). Anchored, it returns to the 31st in March.
+    case 'monthly': {
+      const offset = unitsBetween(rule, iso, 'monthly') + rule.interval;
       return rule.calendar === 'jalali'
-        ? addJalaliMonths(iso, rule.interval)
-        : toISODate(addMonths(parseISODate(iso), rule.interval));
-    case 'yearly':
+        ? addJalaliMonths(rule.start, offset)
+        : toISODate(addMonths(parseISODate(rule.start), offset));
+    }
+    case 'yearly': {
+      const offset = unitsBetween(rule, iso, 'yearly') + rule.interval;
       return rule.calendar === 'jalali'
-        ? addJalaliYears(iso, rule.interval)
-        : toISODate(addYears(parseISODate(iso), rule.interval));
+        ? addJalaliYears(rule.start, offset)
+        : toISODate(addYears(parseISODate(rule.start), offset));
+    }
   }
+}
+
+/** Whole months/years from the series anchor to `iso`, in the rule's calendar. */
+function unitsBetween(rule: RecurrenceRule, iso: ISODate, unit: 'monthly' | 'yearly'): number {
+  const parts = (value: ISODate) => {
+    if (rule.calendar === 'jalali') {
+      const { jy, jm } = toJalali(value);
+      return { y: jy, m: jm };
+    }
+    const date = parseISODate(value);
+    return { y: date.getFullYear(), m: date.getMonth() + 1 };
+  };
+  const a = parts(rule.start);
+  const b = parts(iso);
+  return unit === 'yearly' ? b.y - a.y : (b.y - a.y) * 12 + (b.m - a.m);
 }
 
 function stepWeekly(rule: RecurrenceRule, iso: ISODate): ISODate {
@@ -48,9 +71,9 @@ function stepWeekly(rule: RecurrenceRule, iso: ISODate): ISODate {
 
 function onIntervalWeek(rule: RecurrenceRule, iso: ISODate): boolean {
   if (rule.interval <= 1) return true;
-  const weeks = Math.floor(
-    (parseISODate(iso).getTime() - parseISODate(rule.start).getTime()) / (7 * 86_400_000),
-  );
+  // Calendar-day difference, not milliseconds: a DST change makes a local
+  // week 6d23h long, and flooring that dropped the week count by one.
+  const weeks = Math.floor(differenceInCalendarDays(parseISODate(iso), parseISODate(rule.start)) / 7);
   return weeks >= 0 && weeks % rule.interval === 0;
 }
 

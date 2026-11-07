@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import { Sheet } from '../../components/ui/Sheet';
 import { useReminders } from '../../hooks/useReminders';
+import { useReminderStore } from '../../stores/dataStores';
+import { Button } from '../../components/ui/Button';
 import { ReminderSheet } from './ReminderSheet';
 
 /**
@@ -14,6 +16,7 @@ export function ReminderDetailScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { reminders } = useReminders();
+  const loaded = useReminderStore((s) => s.loaded);
 
   const reminder = reminders.find((r) => r.id === id);
   const close = () => navigate('/', { replace: true });
@@ -28,7 +31,16 @@ export function ReminderDetailScreen() {
           onEdit={() => navigate(`/reminder/${reminder.id}/edit`, { replace: true })}
         />
       ) : (
-        <p className="px-5 py-10 text-center text-sm text-fg-2">{t('common.loading')}</p>
+        // Before the first load: spinner text. After it: the reminder is gone
+        // (deleted, or a stale notification link) — say so instead of "loading" forever.
+        <div className="flex flex-col items-center gap-4 px-5 py-10 text-center">
+          <p className="text-sm text-fg-2">{loaded ? t('detail.notFound') : t('common.loading')}</p>
+          {loaded && (
+            <Button variant="secondary" onClick={close}>
+              {t('common.close')}
+            </Button>
+          )}
+        </div>
       )}
     </Sheet>
   );

@@ -4,6 +4,7 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { Snackbar } from '../ui/Snackbar';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { hasOpenOverlay } from '../../utils/overlayStack';
 
 /** Global keyboard shortcuts: n = new reminder, / = search. */
 function useKeyboardShortcuts() {
@@ -13,12 +14,16 @@ function useKeyboardShortcuts() {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // 'n' typed while a sheet/dialog is open must not navigate away underneath it.
+      if (hasOpenOverlay()) return;
       if (event.key === 'n') {
         event.preventDefault();
         navigate('/reminder/new');
       } else if (event.key === '/') {
         event.preventDefault();
         navigate('/reminders');
+        // The search field mounts with the route — focus it once it exists.
+        window.setTimeout(() => document.querySelector<HTMLInputElement>('[data-search-input]')?.focus(), 60);
       }
     };
     window.addEventListener('keydown', onKey);

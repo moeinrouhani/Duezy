@@ -118,3 +118,23 @@ describe('occurrencesInRange', () => {
     ]);
   });
 });
+
+describe('anchored month/year stepping', () => {
+  it('a bill on the 31st returns to the 31st after a short month (no drift)', () => {
+    const monthly = rule({ freq: 'monthly', start: '2026-01-31' });
+    expect(nextOccurrence(monthly, '2026-01-31')).toBe('2026-02-28');
+    expect(nextOccurrence(monthly, '2026-02-28')).toBe('2026-03-31');
+    expect(nextOccurrence(monthly, '2026-03-31')).toBe('2026-04-30');
+    expect(nextOccurrence(monthly, '2026-04-30')).toBe('2026-05-31');
+  });
+
+  it('a Feb 29 yearly series lands on Feb 29 again in the next leap year', () => {
+    const yearly = rule({ freq: 'yearly', start: '2024-02-29' });
+    expect(nextOccurrence(yearly, '2027-02-28')).toBe('2028-02-29');
+  });
+
+  it('interval 2 monthly stays on the same 2-month phase', () => {
+    const bimonthly = rule({ freq: 'monthly', interval: 2, start: '2026-01-31' });
+    expect(nextOccurrence(bimonthly, '2026-03-31')).toBe('2026-05-31');
+  });
+});

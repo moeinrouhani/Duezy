@@ -3,6 +3,8 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../utils/cn';
+import { useOverlay } from '../../hooks/useOverlay';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 interface SheetProps {
   open: boolean;
@@ -53,7 +55,7 @@ const IDLE_DRAG: DragState = {
 };
 
 /**
- * Instagram-style bottom sheet: opens at a collapsed detent (~45dvh), can be
+ * Phone presentation — Instagram-style bottom sheet: opens at a collapsed detent (~45dvh), can be
  * dragged to full height and back, and dismisses only from the collapsed
  * snap. The design (styling, radius, typography) is untouched — only the
  * interaction is new.
@@ -69,7 +71,7 @@ const IDLE_DRAG: DragState = {
  *   never claims the gesture before the lock logic does; expanded it is
  *   `pan-y` and scrolling is native.
  */
-export function Sheet({ open, onClose, label, children, className }: SheetProps) {
+function MobileSheet({ open, onClose, label, children, className }: SheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
@@ -224,26 +226,8 @@ export function Sheet({ open, onClose, label, children, className }: SheetProps)
     panel.style.transform = 'translateY(100%)';
   }, [open]);
 
-  // Escape, focus hand-off and the body scroll lock — as before.
-  useEffect(() => {
-    if (!open) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        onCloseRef.current();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus?.();
-    };
-  }, [open]);
+  // Escape (top-most overlay only), scroll lock, focus hand-off and trap.
+  useOverlay(open, panelRef, onClose);
 
   // Orientation/viewport changes re-measure the detent and re-seat the sheet.
   useEffect(() => {
@@ -382,7 +366,7 @@ export function Sheet({ open, onClose, label, children, className }: SheetProps)
         className={cn(
           // Fixed at the expanded height; the visible detent is purely the
           // translateY. Wide screens keep the centered column.
-          'flex w-full sm:max-w-lg flex-col rounded-t-3xl bg-surface text-fg-1 shadow-pop outline-none',
+          'flex w-full flex-col rounded-t-3xl bg-surface text-fg-1 shadow-pop outline-none',
           className,
         )}
       >
@@ -412,4 +396,68 @@ export function Sheet({ open, onClose, label, children, className }: SheetProps)
     </div>,
     document.body,
   );
+}
+
+const DIALOG_EXIT_MS = 160;
+
+/** Viewport width from which the detail view is a centered dialog (matches Modal's `sm`). */
+const DIALOG_QUERY = '(min-width: 640px)';
+
+/**
+ * Wide-screen presentation: a centered, bounded dialog with a visible close
+ * button, mouse-wheel scrolling and no drag/snap behavior. The bottom-sheet
+ * detents only make sense under a thumb — on a monitor they left a narrow
+ * column glued to the bottom edge with half its content below the fold.
+ */
+function DialogSheet({ open, onClose, label, children, className }: SheetProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      return;
+    }
+    const id = setTimeout(() => setMounted(false), DIALOG_EXIT_MS);
+    return () => clearTimeout(id);
+  }, [open]);
+
+  useOverlay(open, panelRef, onClose);
+
+  if (!open && !mounted) return null;
+  const state = open ? 'open' : 'closed';
+
+  return createPortal(
+    <div
+      data-state={state}
+      className="overlay-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-6 backdrop-blur-[3px]"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={panelRef}
+        data-state={state}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        tabIndex={-1}
+        className={cn(
+          'overlay-panel relative flex max-h-[min(88dvh,820px)] w-full max-w-xl flex-col overflow-hidden rounded-3xl bg-surface text-fg-1 shadow-pop outline-none',
+          className,
+        )}
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-2">{children}</div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+/**
+ * Detail presentation that adapts to the device: bottom sheet with snap
+ * detents on phones, centered dialog on wide screens. Callers just render it.
+ */
+export function Sheet(props: SheetProps) {
+  const wide = useMediaQuery(DIALOG_QUERY);
+  return wide ? <DialogSheet {...props} /> : <MobileSheet {...props} />;
 }

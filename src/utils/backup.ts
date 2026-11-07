@@ -1,6 +1,8 @@
 import type { BackupFile } from '../repositories/types';
 import { getRepositories } from '../repositories';
 import { isValidISODate } from '../domain/date';
+import { acceptRemote } from '../sync/engine';
+import { useCategoryStore, useReminderStore } from '../stores/dataStores';
 import type { Settings, Timestamp } from '../domain/types';
 
 /** Gather every table + settings into a versioned JSON backup. */
@@ -33,8 +35,12 @@ export function downloadBackup(backup: BackupFile): void {
   const a = document.createElement('a');
   a.href = url;
   a.download = backupFileName(backup.exportedAt);
+  // Firefox needs the anchor in the DOM, and revoking right away can cancel
+  // the download in Safari/Firefox — release the blob a little later.
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export interface ImportResult {
@@ -60,11 +66,24 @@ export async function importBackup(
   if (!isBackupLike(data)) throw new Error('backup.invalidFormat');
 
   const repos = await getRepositories();
-  await Promise.all([
-    repos.categories.bulkPut(data.categories),
-    repos.reminders.bulkPut(data.reminders),
-    repos.completions.bulkPut(data.completions),
+  // Merge by newest change (as documented): an older backup row must never
+  // overwrite a fresher local edit. Local lists include tombstones so a record
+  // deleted here isn't resurrected by a stale backup copy.
+  const [localReminders, localCategories, localCompletions] = await Promise.all([
+    repos.reminders.list({ activeOnly: false }),
+    repos.categories.listAll(),
+    repos.completions.listAll(),
   ]);
+  const reminders = acceptRemote(localReminders, data.reminders);
+  const categories = acceptRemote(localCategories, data.categories);
+  const completions = acceptRemote(localCompletions, data.completions);
+  await Promise.all([
+    repos.categories.bulkPut(categories),
+    repos.reminders.bulkPut(reminders),
+    repos.completions.bulkPut(completions),
+  ]);
+  // The screens read mirror stores — without a refresh imported data stayed invisible until reload.
+  await Promise.all([useReminderStore.getState().refresh(), useCategoryStore.getState().refresh()]);
 
   return {
     backup: data,
@@ -89,8 +108,14 @@ function isBackupLike(value: unknown): value is BackupFile {
     Array.isArray(value.reminders) &&
     Array.isArray(value.categories) &&
     Array.isArray(value.completions) &&
-    value.reminders.every(isReminderLike)
+    value.reminders.every(isReminderLike) &&
+    value.categories.every(isSyncRecordLike) &&
+    value.completions.every(isSyncRecordLike)
   );
+}
+
+function isSyncRecordLike(value: unknown): boolean {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.updatedAt === 'string';
 }
 
 function isReminderLike(value: unknown): boolean {
@@ -99,7 +124,8 @@ function isReminderLike(value: unknown): boolean {
     typeof value.id === 'string' &&
     typeof value.title === 'string' &&
     typeof value.dueDate === 'string' &&
-    isValidISODate(value.dueDate)
+    isValidISODate(value.dueDate) &&
+    typeof value.updatedAt === 'string'
   );
 }
 

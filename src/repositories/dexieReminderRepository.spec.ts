@@ -91,3 +91,27 @@ describe('repositories/dexieReminderRepository occurrence undo', () => {
     expect(revived.dueDate).toBe(month(10));
   });
 });
+
+describe('repositories/dexieReminderRepository pointer & edit rules', () => {
+  it('completing skips occurrences that were already ticked ahead of the pointer', async () => {
+    const id = await createLoan();
+    await repo.completeOccurrence(id, month(1)); // pointer → #2
+    await repo.completeOccurrence(id, month(3)); // ticked early, pointer stays
+    await repo.completeOccurrence(id, month(2)); // pointer must hop over the settled #3
+    expect((await repo.get(id))!.dueDate).toBe(month(4));
+  });
+
+  it('re-saving a done reminder keeps it done; moving its date revives it', async () => {
+    const { id } = await repo.create({
+      title: 'One-off',
+      dueDate: '2100-03-01',
+      categoryId: 'cat-bills',
+      recurrence: null,
+      alerts: { offsets: [] },
+      pinned: false,
+    });
+    await repo.complete(id);
+    expect((await repo.update(id, { dueDate: '2100-03-01', notes: 'edited' })).done).toBe(true);
+    expect((await repo.update(id, { dueDate: '2100-03-09' })).done).toBe(false);
+  });
+});

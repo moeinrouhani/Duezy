@@ -5,13 +5,12 @@ import { useNavigate } from 'react-router';
 import { Bell, CircleCheck, ListChecks, Pencil, Pin, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button, Chip, EmptyState, SegmentedControl } from '../../components/ui';
-import { Sheet } from '../../components/ui/Sheet';
 import { Input } from '../../components/ui/Input';
 import { IconButton } from '../../components/ui/Button';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
 import { useConfirm } from '../../components/ui/Snackbar';
 import { StatsPanel } from './StatsPanel';
-import { ReminderSheet } from '../reminder-detail/ReminderSheet';
+import { ReminderSheetHost } from '../reminder-detail/ReminderSheetHost';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useCompletions } from '../../hooks/useCompletions';
 import { useLocalDate } from '../../hooks/useLocalDate';
@@ -67,12 +66,6 @@ export function RemindersScreen() {
     });
     return sortReminders(matches);
   }, [reminders, categories, query, statusFilter, t]);
-
-  // Live data for the open sheet — a done/pin/delete lands instantly.
-  const selected = useMemo(
-    () => reminders.find((r) => r.id === selectedId) ?? null,
-    [reminders, selectedId],
-  );
 
   const statusCounts = useMemo(
     () => ({
@@ -136,6 +129,7 @@ export function RemindersScreen() {
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('search.placeholder')}
               aria-label={t('search.title')}
+              data-search-input
               className="ps-10 pe-10"
             />
             {query && (
@@ -208,16 +202,12 @@ export function RemindersScreen() {
       )}
 
       {/* Detail sheet — same page underneath; done/pin/delete land live. */}
-      {selected && (
-        <Sheet open onClose={() => setSelectedId(null)} label={selected.title}>
-          <ReminderSheet
-            reminder={selected}
-            mode="manage"
-            onClose={() => setSelectedId(null)}
-            onEdit={() => navigate(`/reminder/${selected.id}/edit`)}
-          />
-        </Sheet>
-      )}
+      <ReminderSheetHost
+        reminderId={selectedId}
+        mode="manage"
+        onClose={() => setSelectedId(null)}
+        onEdit={(reminder) => navigate(`/reminder/${reminder.id}/edit`)}
+      />
     </div>
   );
 }
@@ -259,7 +249,13 @@ function ReminderManageRow({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') onOpen();
+        // Only react to keys pressed on the row itself — Enter/Space on the
+        // nested check button bubbles up here and used to open the sheet too.
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
       }}
       style={{ '--i': index } as CSSProperties}
       className={cn(

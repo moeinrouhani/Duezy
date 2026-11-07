@@ -16,6 +16,7 @@ import {
   Repeat,
   Trash2,
   Wallet,
+  X,
 } from 'lucide-react';
 import { Button, IconButton } from '../../components/ui/Button';
 import { CategoryTile } from '../../components/ui/CategoryIcon';
@@ -69,7 +70,10 @@ export function ReminderSheet({
   const completions = useCompletions();
   const lang = i18n.language === 'en' ? 'en' : 'fa';
 
-  const history = completions.filter((c) => c.reminderId === reminder.id);
+  // Newest first — the repository hands rows back in random-id order.
+  const history = completions
+    .filter((c) => c.reminderId === reminder.id)
+    .sort((a, b) => b.completedAt.localeCompare(a.completedAt));
   const manage = mode === 'manage';
 
   const onDelete = async () => {
@@ -165,7 +169,9 @@ export function ReminderSheet({
     <>
       {/* Header: sticky while the body scrolls under it. */}
       <div className="sticky top-0 z-10 flex items-center gap-1 border-b border-line bg-surface/95 px-3 py-2.5 backdrop-blur">
-        <h2 className="min-w-0 flex-1 truncate px-1.5 text-base font-semibold">{reminder.title}</h2>
+        <h2 className="min-w-0 flex-1 px-1.5 text-base leading-snug font-semibold break-words line-clamp-2" title={reminder.title}>
+          {reminder.title}
+        </h2>
         {manage && (
           <>
             <IconButton label={t('common.edit')} onClick={onEdit}>
@@ -188,6 +194,10 @@ export function ReminderSheet({
             </IconButton>
           </>
         )}
+        {/* Wide screens have no grabber or swipe — give the dialog a real close control. */}
+        <IconButton label={t('common.close')} onClick={onClose} className="hidden sm:inline-flex">
+          <X size={18} />
+        </IconButton>
       </div>
 
       <div className="flex flex-col gap-4 p-4">

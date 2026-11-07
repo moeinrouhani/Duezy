@@ -154,6 +154,7 @@
     "cardLabel": "Recipient card",
     "notesLabel": "Notes",
     "alertsLabel": "Alerts",
+    "notFound": "This reminder no longer exists",
     "deleteTitle": "Delete this reminder?",
     "deleteMessage": "It disappears from all lists. You can undo right after."
   },

@@ -36,12 +36,9 @@ export function buildSlot(reminder: Reminder, offset: AlertOffset, notifyTime: s
  *
  * Slots scheduled BEFORE the reminder's current `updatedAt` are skipped: a
  * reminder created on its due day with 3/1/0-day offsets would otherwise fire
- * every already-past stage at once. The due-day stage is exempt — "due today"
- * is the signal the user actually asked for, so a reminder created (or last
- * edited) after its notify time still fires it, late, on the day itself.
- * Completion advances the occurrence and bumps `updatedAt`, so retroactive
- * stages of the regenerated date are cut too; genuinely future stages are
- * untouched.
+ * every already-past stage at once. Completion advances the occurrence and
+ * bumps `updatedAt`, so retroactive stages of the regenerated date are cut
+ * too; genuinely future stages are untouched.
  */
 export function computeAlertSlots(reminders: Reminder[], notifyTime: string): AlertSlot[] {
   const slots: AlertSlot[] = [];
@@ -50,9 +47,7 @@ export function computeAlertSlots(reminders: Reminder[], notifyTime: string): Al
     const existsSinceMs = Date.parse(reminder.updatedAt);
     for (const offset of reminder.alerts.offsets) {
       const slot = buildSlot(reminder, offset, notifyTime);
-      const stale = Number.isFinite(existsSinceMs) && slot.at.getTime() < existsSinceMs;
-      const dueDayCatchUp = slot.offset === 0 && daysUntil(reminder.dueDate) === 0;
-      if (stale && !dueDayCatchUp) continue;
+      if (Number.isFinite(existsSinceMs) && slot.at.getTime() < existsSinceMs) continue;
       slots.push(slot);
     }
   }

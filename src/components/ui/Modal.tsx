@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../utils/cn';
 import { IconButton } from './Button';
+import { useOverlay } from '../../hooks/useOverlay';
 
 interface ModalProps {
   open: boolean;
@@ -22,14 +23,6 @@ const EXIT_MS = 200;
 export function Modal({ open, onClose, title, children, variant = 'center', className }: ModalProps) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
-  // Latest-callback ref: the focus effect must run only on open/close. Keying
-  // it on `onClose` re-ran it on every parent render — and parents re-render
-  // on every keystroke — repeatedly yanking focus out of inputs mid-typing.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-
   // `mounted` outlives `open` by the exit animation.
   const [mounted, setMounted] = useState(open);
   useEffect(() => {
@@ -41,27 +34,8 @@ export function Modal({ open, onClose, title, children, variant = 'center', clas
     return () => clearTimeout(id);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        onCloseRef.current();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    // Lock page scroll behind the dialog.
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    // Move focus into the dialog for keyboard/screen-reader users.
-    ref.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus?.();
-    };
-  }, [open]);
+  // Escape (top-most only), scroll lock, focus hand-in/back and Tab trap.
+  useOverlay(open, ref, onClose);
 
   if (!open && !mounted) return null;
   const state = open ? 'open' : 'closed';

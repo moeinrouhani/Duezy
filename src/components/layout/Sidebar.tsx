@@ -21,8 +21,8 @@ export function Sidebar() {
         <span className="flex h-9 w-9 items-center justify-center rounded-xl ">
           <img
             src="/icons/favicon.svg"
-            alt="App logo"
-            // className="h-[18px] w-[18px]"
+            alt=""
+            aria-hidden
           />
         </span>
         <div>

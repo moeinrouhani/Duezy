@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, MouseEvent } from 'react';
+import type { MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Copy } from 'lucide-react';
 import { copyText } from '../../utils/clipboard';
@@ -27,7 +27,7 @@ export function CardCopyChip({
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const onCopy = (event: MouseEvent | KeyboardEvent) => {
+  const onCopy = (event: MouseEvent) => {
     event.stopPropagation();
     if (copied) return;
     void copyText(card).then((ok) => {
@@ -49,7 +49,11 @@ export function CardCopyChip({
         aria-label={t('common.copyCard')}
         title={t('common.copyCard')}
         onClick={onCopy}
-        onKeyDown={onCopy}
+        // Keep Enter/Space from reaching a clickable parent row; the button's own
+        // click (fired natively for those keys) does the copying.
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+        }}
         className={cn(
           'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-fg-2',
           'transition-[background-color,color,transform] duration-150 hover:bg-surface-2 active:scale-90',

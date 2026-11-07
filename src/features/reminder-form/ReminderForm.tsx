@@ -12,6 +12,8 @@ import { DatePicker } from '../../components/date-picker/DatePicker';
 import { useReminders, useCategories } from '../../hooks/useReminders';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { todayISO } from '../../domain/date';
+import { goBack } from '../../utils/navigation';
+import type { Reminder } from '../../domain/types';
 import { CATEGORY_COLOR_HEX } from '../../themes/accents';
 import { cn } from '../../utils/cn';
 import { parseAmount, formatAmountInput, formatCardInput, parseCardDigits } from '../../utils/digits';
@@ -53,6 +55,9 @@ export function ReminderForm() {
   const [cardText, setCardText] = useState('');
   const [cardError, setCardError] = useState(false);
   const [ready, setReady] = useState(!editing);
+  const [saving, setSaving] = useState(false);
+  // The reminder as loaded — lets save() keep the series anchor intact.
+  const [original, setOriginal] = useState<Reminder | null>(null);
 
   // Load existing reminder when editing.
   useEffect(() => {
@@ -68,6 +73,7 @@ export function ReminderForm() {
         navigate('/');
         return;
       }
+      setOriginal(reminder);
       setTitle(reminder.title);
       setDueDate(reminder.dueDate);
       setCategoryId(reminder.categoryId);
@@ -104,7 +110,7 @@ export function ReminderForm() {
       setCardError(true);
       return;
     }
-    const { rule, paidCount } = draftToRule(recurrence, dueDate);
+    const { rule, paidCount } = draftToRule(recurrence, dueDate, original);
     const overrides =
       rule && rule.end.type === 'after'
         ? cleanInstallmentAmounts(recurrence.installmentAmounts, rule.end.count + (paidCount ?? 0))
@@ -123,12 +129,20 @@ export function ReminderForm() {
       alerts: { offsets: alerts },
       pinned,
     };
-    if (editing) {
-      await update(id!, draft);
-    } else {
-      await create(draft);
+    if (saving) return;
+    setSaving(true);
+    try {
+      if (editing) {
+        await update(id!, draft);
+      } else {
+        await create(draft);
+      }
+      // Editing returns to where the user came from (list or dashboard).
+      if (editing) goBack(navigate);
+      else navigate('/');
+    } finally {
+      setSaving(false);
     }
-    navigate('/');
   };
 
   if (!ready) {
@@ -276,10 +290,10 @@ export function ReminderForm() {
 
         {/* Clears the bottom nav plus the phone's gesture-bar inset. */}
         <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 flex gap-3 rounded-2xl bg-bg/80 py-2 backdrop-blur-md md:bottom-2">
-          <Button type="button" variant="secondary" className="flex-1" onClick={() => navigate(-1)}>
+          <Button type="button" variant="secondary" className="flex-1" onClick={() => goBack(navigate)}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" className="flex-1">
+          <Button type="submit" className="flex-1" disabled={saving}>
             {t('common.save')}
           </Button>
         </div>
