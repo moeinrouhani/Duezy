@@ -8,7 +8,9 @@
     "reminders": "Reminders",
     "settings": "Settings",
     "categories": "Categories",
-    "add": "New reminder"
+    "add": "New reminder",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "common": {
     "save": "Save",
@@ -226,7 +228,14 @@
     "checkUpdates": "Check for updates",
     "upToDate": "You're on the latest version",
     "accountTitle": "Account & sync",
-    "accountHint": "Sign in to keep the same data on all your devices. Your data stays on this device either way."
+    "accountHint": "Sign in to keep the same data on all your devices. Your data stays on this device either way.",
+    "notifTest": "Send a test notification",
+    "notifTestTitle": "Notifications are working",
+    "notifTestBody": "This is how your due-date alerts will look.",
+    "notifTestSent": "Test sent. Don't see it? Check your system's notification and Do-not-disturb settings.",
+    "notifTestFailed": "The notification couldn't be shown. Make sure notifications are allowed for this site.",
+    "notifUnsupported": "This browser doesn't support notifications. On iPhone/iPad, add the app to your Home Screen first.",
+    "notifLimitHint": "Alerts appear while the app is open in a browser tab or installed. If it's fully closed, missed alerts show up the next time you open it."
   },
   "auth": {
     "loginTab": "Sign in",

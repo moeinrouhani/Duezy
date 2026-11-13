@@ -13,7 +13,12 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useSyncStore } from '../../stores/syncStore';
 import { ACCENTS } from '../../themes/accents';
-import { requestNotificationPermission } from '../../hooks/useNotificationScheduler';
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendTestNotification,
+} from '../../hooks/useNotificationScheduler';
+import type { NotificationSupport } from '../../hooks/useNotificationScheduler';
 import { createBackup, downloadBackup, importBackup } from '../../utils/backup';
 import { useUiStore } from '../../stores/uiStore';
 import { applyPendingUpdate } from '../../pwa/update';
@@ -49,7 +54,7 @@ export function SettingsScreen() {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>('default');
+  const [permission, setPermission] = useState<NotificationSupport>(getNotificationPermission);
 
   const user = useAuthStore((s) => s.user);
   const signOut = useAuthStore((s) => s.signOut);
@@ -57,8 +62,16 @@ export function SettingsScreen() {
   const lastSyncedAtMs = useSyncStore((s) => s.lastSyncedAtMs);
   const lastPulledCount = useSyncStore((s) => s.lastPulledCount);
 
+  // The user can flip the permission in the browser's site settings and come
+  // back to this tab — re-read it instead of trusting the value from mount.
   useEffect(() => {
-    setPermission(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
+    const sync = () => setPermission(getNotificationPermission());
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', sync);
+    };
   }, []);
 
   const syncLine = () => {
@@ -122,6 +135,11 @@ export function SettingsScreen() {
     setPermission(result);
     update({ notificationsEnabled: result === 'granted' });
     if (result === 'denied') showSnackbar(t('settings.permissionDenied'));
+  };
+
+  const onTestNotification = async () => {
+    const ok = await sendTestNotification(t('settings.notifTestTitle'), t('settings.notifTestBody'));
+    showSnackbar(t(ok ? 'settings.notifTestSent' : 'settings.notifTestFailed'));
   };
 
   return (
@@ -236,14 +254,32 @@ export function SettingsScreen() {
         <Toggle
           label={t('settings.enableLabel')}
           checked={settings.notificationsEnabled && permission === 'granted'}
+          disabled={permission === 'unsupported'}
           onChange={(enabled) => void onToggleNotifications(enabled)}
         />
         <p className="text-xs leading-5 text-fg-2">{t('settings.enableHint')}</p>
+        {permission === 'unsupported' && (
+          <p className="text-xs leading-5 text-danger">{t('settings.notifUnsupported')}</p>
+        )}
+        {permission === 'denied' && (
+          <p className="text-xs leading-5 text-danger">{t('settings.permissionDenied')}</p>
+        )}
+        {settings.notificationsEnabled && permission === 'granted' && (
+          <>
+            <p className="text-xs leading-5 text-fg-2">{t('settings.notifLimitHint')}</p>
+            <div>
+              <Button variant="secondary" onClick={() => void onTestNotification()}>
+                {t('settings.notifTest')}
+              </Button>
+            </div>
+          </>
+        )}
         <Row label={t('settings.notifyTimeLabel')}>
           <input
             type="time"
             value={settings.notifyTime}
-            onChange={(event) => update({ notifyTime: event.target.value })}
+            // Clearing the field yields '' — an invalid time would silently disable every alert.
+            onChange={(event) => event.target.value && update({ notifyTime: event.target.value })}
             className="rounded-xl border border-line bg-surface px-3 py-2 text-sm focus:border-accent-500 focus:outline-none"
           />
         </Row>
