@@ -127,13 +127,16 @@ async function checkAlerts(t: Translate): Promise<void> {
 }
 
 /** Serialise checks across tabs/ticks so two of them can't both fire the same alert. */
-function runExclusive(task: () => Promise<void>): Promise<void> {
+async function runExclusive(task: () => Promise<void>): Promise<void> {
   if (navigator.locks) {
-    return navigator.locks.request('duezy-notify', { ifAvailable: true }, async (lock) => {
+    // Awaited (not returned) so the result type is `void` whichever way the
+    // installed TypeScript lib infers `request`'s generic (`Promise<void>` vs `void`).
+    await navigator.locks.request('duezy-notify', { ifAvailable: true }, async (lock) => {
       if (lock) await task();
     });
+    return;
   }
-  return task();
+  await task();
 }
 
 /**
