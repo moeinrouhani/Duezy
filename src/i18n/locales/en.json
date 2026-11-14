@@ -56,7 +56,9 @@
     "paidLabel": "Paid",
     "unpaidLabel": "Unpaid",
     "allPaid": "Everything is paid this month",
-    "installmentOf": "Installment {{current}}/{{total}}"
+    "installmentOf": "Installment {{current}}/{{total}}",
+    "statsScopeMonth": "Whole month",
+    "statsScopeDay": "{{date}} only"
   },
   "reminders": {
     "tabList": "Reminders",

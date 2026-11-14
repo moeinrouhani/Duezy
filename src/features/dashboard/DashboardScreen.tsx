@@ -64,27 +64,33 @@ export function DashboardScreen() {
     () => occurrencesBetween(reminders, completions, range.start, range.end),
     [reminders, completions, range],
   );
-  const summary = useMemo(() => summarizeOccurrences(occurrences), [occurrences]);
+  // The slice everything below reports on: the whole month by default, or
+  // just the picked day. Stats, filter counts and the list all read from it so
+  // they can never disagree; only the calendar's dots stay month-wide.
+  const scoped = useMemo(
+    () => (selectedDay ? occurrences.filter((o) => o.date === selectedDay) : occurrences),
+    [occurrences, selectedDay],
+  );
+  const summary = useMemo(() => summarizeOccurrences(scoped), [scoped]);
 
   const counts = useMemo(
     () => ({
-      all: occurrences.length,
-      pending: occurrences.filter((o) => !o.checked).length,
-      done: occurrences.filter((o) => o.checked).length,
-      overdue: occurrences.filter((o) => o.overdue).length,
+      all: scoped.length,
+      pending: scoped.filter((o) => !o.checked).length,
+      done: scoped.filter((o) => o.checked).length,
+      overdue: scoped.filter((o) => o.overdue).length,
     }),
-    [occurrences],
+    [scoped],
   );
 
   const filtered = useMemo(() => {
-    return occurrences.filter((o) => {
-      if (selectedDay && o.date !== selectedDay) return false;
+    return scoped.filter((o) => {
       if (filter === 'pending') return !o.checked;
       if (filter === 'done') return o.checked;
       if (filter === 'overdue') return o.overdue;
       return true;
     });
-  }, [occurrences, filter, selectedDay]);
+  }, [scoped, filter]);
 
   const marks = useMemo(() => {
     const byDay = new Map<string, DayMark>();
@@ -120,7 +126,11 @@ export function DashboardScreen() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t('nav.dashboard')} subtitle={localDate.formatDateLong(todayISO())} />
 
-      <MonthStatsCard summary={summary} lang={lang} />
+      <MonthStatsCard
+        summary={summary}
+        lang={lang}
+        scopeLabel={selectedDay ? t('dashboard.statsScopeDay', { date: localDate.formatDate(selectedDay) }) : t('dashboard.statsScopeMonth')}
+      />
 
       <section className="rounded-3xl border border-line bg-surface p-4 shadow-card">
         <DualCalendarPanel
@@ -222,9 +232,12 @@ function FilterChip({
 function MonthStatsCard({
   summary,
   lang,
+  scopeLabel,
 }: {
   summary: ReturnType<typeof summarizeOccurrences>;
   lang: 'en' | 'fa';
+  /** What the numbers cover: the whole month, or the selected day. */
+  scopeLabel: string;
 }) {
   const { t } = useTranslation();
   const unpaidCount = summary.count - summary.paidCount;
@@ -234,6 +247,10 @@ function MonthStatsCard({
 
   return (
     <section className="overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
+      {/* Keyed so the caption re-fades whenever the scope flips between month and day. */}
+      <p key={scopeLabel} aria-live="polite" className="anim-fade-in px-4 pt-3 text-xs font-medium text-fg-2">
+        {scopeLabel}
+      </p>
       <div className="grid grid-cols-3 [&>*+*]:border-s [&>*+*]:border-line">
         <StatCell 
           label={t('dashboard.dueLabel')} 
@@ -258,7 +275,7 @@ function MonthStatsCard({
         />
       </div>
 
-      {/* Paid share of the month — fills in once, then follows every check. */}
+      {/* Paid share of the current scope — follows every check. */}
       <div className="flex items-center gap-3 border-t border-line bg-surface-2/50 px-4 py-2.5">
         {allPaid ? (
           <p className="anim-pop flex flex-1 items-center gap-1.5 text-xs font-medium text-success">

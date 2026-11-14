@@ -53,7 +53,9 @@
     "paidLabel": "پرداخت‌شده",
     "unpaidLabel": "پرداخت‌نشده",
     "allPaid": "همه موارد این ماه پرداخت شده",
-    "installmentOf": "قسط {{current}}/{{total}}"
+    "installmentOf": "قسط {{current}}/{{total}}",
+    "statsScopeMonth": "کل ماه",
+    "statsScopeDay": "فقط {{date}}"
   },
   "reminders": {
     "tabList": "یادآورها",

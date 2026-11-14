@@ -22,14 +22,17 @@ function reminder(partial: Partial<Reminder>): Reminder {
 
 function completionAt(daysAgo: number, partial: Partial<CompletionRecord> = {}): CompletionRecord {
   const day = addDaysISO(todayISO(), -daysAgo);
+  // Local noon of that day — stays on `day` in every time zone (a fixed UTC hour doesn't).
+  const [y, m, d] = day.split('-').map(Number);
+  const at = new Date(y, m - 1, d, 12).toISOString();
   return {
     id: `c${daysAgo}`,
     reminderId: 'r1',
     dueDateCompleted: day,
-    completedAt: `${day}T10:00:00.000Z`,
+    completedAt: at,
     skipped: false,
-    createdAt: `${day}T10:00:00.000Z`,
-    updatedAt: `${day}T10:00:00.000Z`,
+    createdAt: at,
+    updatedAt: at,
     deletedAt: null,
     ...partial,
   };
@@ -99,5 +102,26 @@ describe('domain/stats', () => {
     expect(stats.settledCount).toBe(0);
     expect(stats.skippedTotal).toBe(1);
     expect(stats.onTimeRate).toBeNull();
+  });
+
+  it('buckets completions by the LOCAL day, not the UTC day', () => {
+    // 23:30 local on the due date: in UTC-offset zones that is already "tomorrow" in UTC.
+    const day = addDaysISO(todayISO(), -2);
+    const [y, m, d] = day.split('-').map(Number);
+    const lateEvening = new Date(y, m - 1, d, 23, 30).toISOString();
+    const stats = computeStats(
+      [reminder({})],
+      [{ ...completionAt(2), dueDateCompleted: day, completedAt: lateEvening }],
+      30,
+    );
+    expect(stats.onTimeRate).toBe(100); // done on the due day, so on time
+    expect(stats.series.at(-3)?.count).toBe(1); // charted on that same local day
+  });
+
+  it("ignores a deleted reminder's completions everywhere (matches the other cards)", () => {
+    const gone = reminder({ deletedAt: '2026-01-02T00:00:00.000Z' });
+    const stats = computeStats([gone], [completionAt(2), completionAt(3, { skipped: true })], 30);
+    expect(stats).toMatchObject({ onTimeRate: null, skippedTotal: 0 });
+    expect(stats.series.every((day) => day.count === 0)).toBe(true);
   });
 });

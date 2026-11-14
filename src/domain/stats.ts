@@ -23,6 +23,22 @@ export interface StatsSummary {
 const DAY_MS = 86_400_000;
 
 /**
+ * The user's LOCAL calendar day of a stored timestamp. `completedAt` is a UTC
+ * ISO string, so `slice(0, 10)` gave the UTC date — for anyone off UTC an
+ * evening (or just-after-midnight) completion landed on the wrong day, which
+ * skewed the on-time rate, the streak, the chart and the window edge.
+ */
+function localDay(timestamp: string): ISODate {
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? timestamp.slice(0, 10) : toISODate(date);
+}
+
+/** Whole days between two ISO dates — rounded, so DST's 23/25-hour days don't skew it. */
+function dayDiff(later: ISODate, earlier: ISODate): number {
+  return Math.round((parseISODate(later).getTime() - parseISODate(earlier).getTime()) / DAY_MS);
+}
+
+/**
  * Statistics over the LAST `days` days (default 30), counted per OCCURRENCE:
  * a reminder due 38 days ago that was never settled shows up under "missed"
  * in a 90-day window and disappears from a 7-day one — the window drives the
@@ -42,19 +58,28 @@ export function computeStats(
   const settledCount = occurrences.filter((o) => o.checked).length;
   const missedCount = occurrences.filter((o) => !o.checked && o.date < today).length;
 
+  // Windowed completions of reminders that still exist — the same population
+  // the Due/Settled cards and the category bars use (a deleted reminder's
+  // history used to leak into the on-time rate, skips and chart only).
+  const liveIds = new Set(reminders.filter((r) => !r.deletedAt).map((r) => r.id));
   const settled = completions.filter(
-    (c) => !c.deletedAt && c.completedAt.slice(0, 10) >= windowStart,
+    (c) => !c.deletedAt && liveIds.has(c.reminderId) && localDay(c.completedAt) >= windowStart,
   );
   const real = settled.filter((c) => !c.skipped);
-  const onTimeTotal = real.filter((c) => c.completedAt.slice(0, 10) <= c.dueDateCompleted).length;
+  const onTimeTotal = real.filter((c) => localDay(c.completedAt) <= c.dueDateCompleted).length;
 
-  // Completion counts per calendar day (real completions only) — for the
-  // chart and the streak.
+  // Real completions per local day. The streak is a habit measure, so it looks
+  // at every completion ever made; the chart only at the window's population.
   const perDay = new Map<ISODate, number>();
   for (const c of completions) {
     if (c.deletedAt || c.skipped) continue;
-    const day = c.completedAt.slice(0, 10);
+    const day = localDay(c.completedAt);
     perDay.set(day, (perDay.get(day) ?? 0) + 1);
+  }
+  const perDayWindow = new Map<ISODate, number>();
+  for (const c of real) {
+    const day = localDay(c.completedAt);
+    perDayWindow.set(day, (perDayWindow.get(day) ?? 0) + 1);
   }
 
   // Streak: walk back from today; allow starting at today or yesterday.
@@ -70,18 +95,17 @@ export function computeStats(
   if (days <= 31) {
     for (let i = 0; i < days; i++) {
       const date = addDaysISO(windowStart, i);
-      series.push({ date, count: perDay.get(date) ?? 0 });
+      series.push({ date, count: perDayWindow.get(date) ?? 0 });
     }
   } else {
-    const startMs = parseISODate(windowStart).getTime();
     const weeks = Math.ceil(days / 7);
     const buckets = new Array<number>(weeks).fill(0);
     for (const c of real) {
-      const index = Math.floor((parseISODate(c.completedAt.slice(0, 10)).getTime() - startMs) / (7 * DAY_MS));
+      const index = Math.floor(dayDiff(localDay(c.completedAt), windowStart) / 7);
       if (index >= 0 && index < weeks) buckets[index]++;
     }
     for (let k = 0; k < weeks; k++) {
-      series.push({ date: toISODate(new Date(startMs + k * 7 * DAY_MS)), count: buckets[k] });
+      series.push({ date: addDaysISO(windowStart, k * 7), count: buckets[k] });
     }
   }
 
